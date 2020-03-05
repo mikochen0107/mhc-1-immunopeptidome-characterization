@@ -1,4 +1,4 @@
 from .mlp import MultilayerPerceptron
-from .dataloader import PeptideDataset
+from .dataset import PeptideDataset
 
 __all__ = ['MultilayerPerceptron', 'PeptideDataset']

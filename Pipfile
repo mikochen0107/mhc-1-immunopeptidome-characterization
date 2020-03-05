@@ -9,3 +9,6 @@ matplotlib = "*"
 pandas = "*"
 scikit-learn = "*"
 jupyterlab = "*"
+
+[dev-packages]
+pylint = "*"
