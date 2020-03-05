@@ -173,6 +173,7 @@ class PeptideDataset:
         elif self.padding == 'end':
             padded_seq = seq + pad_bits
         elif self.padding == 'after2':
-            padded_seq = seq[:2] + pad_bits + seq[3:]
+            pos = 2 * bits
+            padded_seq = seq[:pos] + pad_bits + seq[pos:]
             
         return padded_seq

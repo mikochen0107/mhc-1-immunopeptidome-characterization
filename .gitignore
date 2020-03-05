@@ -2,3 +2,4 @@ datasets/MHC_I_el_allele_specific
 .DS_Store
 .ipynb_checkpoints
 .vscode
+__pycache__
