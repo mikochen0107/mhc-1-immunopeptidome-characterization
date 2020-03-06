@@ -1,5 +1,7 @@
 import os
 import numpy as np
+import matplotlib.pyplot as plt
+from collections import Counter
 
 class PeptideDataset:
     ROOT = '../datasets/MHC_I_el_allele_specific'.format(__file__)  # root directory containing peptide binding data
@@ -42,7 +44,7 @@ class PeptideDataset:
         self.test_set = test_set
         self.input_format = input_format
         
-        self.data, self.targets = self.parse_csv()
+        self.data, self.targets, self.raw_data = self.parse_csv()
         
        
     def parse_csv(self):
@@ -76,7 +78,7 @@ class PeptideDataset:
                 data[file].append(self.format_seq(aa_seq))
             data[file] = np.stack(data[file], axis=0)
         
-        return data, targets
+        return data, targets, raw_data
     
     def format_seq(self, seq):
         '''
@@ -178,7 +180,7 @@ class PeptideDataset:
             
         return padded_seq
     
-    def get_fold(self, fold_idx=[0, 1, 2, 3], randomize=True):
+    def get_fold(self, fold_idx=[0, 1, 2, 3], randomize=True, raw_data=False):
         '''
         Extracts the desired folds, concatenates them into a single list, and randomizes the data points
         
@@ -192,15 +194,11 @@ class PeptideDataset:
         features: ndarray
             Concatenated list of the desired folds
         '''
-        data_fold = np.empty
         
-        for f in fold_idx:
-            fold = self.data['c00{}'.format(f)]
-            data_fold = np.concatenate((data_fold, fold), axis=0)
-        
-        # randomize the data points
+        which_data = self.data if raw_data else self.raw_data
+        _data_fold = np.vstack([which_data['c00{}'.format(f)] for f in fold_idx])
         if randomize:
-            data_fold = np.random.shuffle(data_fold)
+            data_fold = _data_fold[np.random.permutation(_data_fold.shape[0])]
         
         return data_fold
     
@@ -216,12 +214,13 @@ class PeptideDataset:
         Returns
         ----------
         features: plt.figure
-            Histogram of peptide lengths
-            Amino acid distribution
-            Sizes of folds
+            Histogram of peptide lengths,
+            amino acid distribution,
+            sizes of folds
         '''
+        
         # get the folds of interest 
-        data = self.get_fold(fold_idx)
+        data = self.get_fold(fold_idx, raw_data=True)
         
         # histogram of peptide lengths
         pep_len = []
