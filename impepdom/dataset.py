@@ -1,7 +1,10 @@
 import os
+from collections import Counter
+
+import torch
 import numpy as np
 import matplotlib.pyplot as plt
-from collections import Counter
+import torch
 
 class PeptideDataset:
     ROOT = '../datasets/MHC_I_el_allele_specific'.format(__file__)  # root directory containing peptide binding data
@@ -45,7 +48,19 @@ class PeptideDataset:
         self.input_format = input_format
         
         self.data, self.targets, self.raw_data = self.parse_csv()
-        
+
+    ### (begin) Neural network training related methods ###
+
+    def get_peptide_loader(self, batch_size=64):
+
+        peploader = torch.utils.data.DataLoader(trainset, batch_size=64, shuffle=True)
+
+        return peploader
+
+    def normalized_data(self):
+        pass
+
+    ### (end) Neural network training related methods ###
        
     def parse_csv(self):
         '''
