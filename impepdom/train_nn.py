@@ -49,7 +49,7 @@ def train_nn(model, peploader, criterion=None, optimizer=None, scheduler=None, n
 
 def save_model(model):
     name = model.get_my_name()
-    dt = datetime.now().strftime("{}-%Y-%m-%d-%H-%M-%S".format(name))
+    dt = datetime.now().strftime("{}-%y%m%d-%H%M%S".format(name))
     os.mkdir(os.path.join(PATH, dt))
     filename = os.path.join(PATH, dt, 'model_state_dict')
     torch.save(model.state_dict(), filename)

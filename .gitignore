@@ -1,4 +1,6 @@
 datasets/MHC_I_el_allele_specific
+store/*
+!store/.placeholder
 .DS_Store
 .ipynb_checkpoints
 .vscode
