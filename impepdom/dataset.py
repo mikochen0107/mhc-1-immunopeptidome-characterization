@@ -11,7 +11,7 @@ class PeptideDataset:
     ALL_AA = ['A', 'R', 'N', 'D', 'C', 'E', 'Q', 'G', 'H', 'I', 'L', 'K', 'M', 'F', 'P', 'S', 'T', 'W', 'Y', 'V']
     NUM_AA = len(ALL_AA)  # number of amino acids (20)
     
-    def __init__(self, hla_allele, root=None, encoding='default', max_aa_len=14, padding='end', test_set='c004', input_format='linear'):
+    def __init__(self, hla_allele, root=None, encoding='default', max_aa_len=14, padding='end', test_set='c004', input_format='linear', toy=False):
         '''
         Initialize dataset class for each human leukocyte antigen (HLA or MHC) allele.
         
@@ -37,6 +37,9 @@ class PeptideDataset:
         
         input_format: str
             Specify datum shape. Options: 'linear', '2d'
+            
+        toy: bool
+            Initialize only a small subset of peptides dataset
         '''
         
         self.hla_allele = hla_allele
@@ -46,19 +49,18 @@ class PeptideDataset:
         self.padding = padding
         self.test_set = test_set
         self.input_format = input_format
+        self.toy = toy
         
         self.data, self.targets, self.raw_data = self.parse_csv()
 
     ### (begin) Neural network training related methods ###
 
-    def get_peptide_loader(self, batch_size=64):
-
-        peploader = torch.utils.data.DataLoader(trainset, batch_size=64, shuffle=True)
+    def get_peptide_dataloader(self, batch_size=64, fold_idx=[0]):
+        data, targets = self.get_fold(fold_idx)
+        dataset = Dataset(data, targets)
+        peploader = torch.utils.data.DataLoader(dataset, batch_size=64, shuffle=True)
 
         return peploader
-
-    def normalized_data(self):
-        pass
 
     ### (end) Neural network training related methods ###
        
@@ -83,8 +85,8 @@ class PeptideDataset:
         
         for file in files:
             content = np.loadtxt(os.path.join(self.root, self.hla_allele, file), dtype='str')
-            raw_data[file] = content[:, 0].astype('str')
-            targets[file] = content[:, 1].astype(float)
+            raw_data[file] = (content[:, 0] if not self.toy else content[:100, 0]).astype('str')
+            targets[file] = (content[:, 1] if not self.toy else content[:100, 1]).astype(float)
         
         data = {}
         for file in files:
@@ -195,7 +197,7 @@ class PeptideDataset:
             
         return padded_seq
     
-    def get_fold(self, fold_idx=[0, 1, 2, 3], randomize=True, raw_data=False):
+    def get_fold(self, fold_idx=[0], randomize=True, raw_data=False):
         '''
         Extracts the desired folds, concatenates them into a single list, and randomizes the data points
         
@@ -206,16 +208,23 @@ class PeptideDataset:
         
         Returns
         ----------
-        features: ndarray
+        data_fold: ndarray
             Concatenated list of the desired folds
+            
+        target_fold: ndarray
+            Vector of corresponding targets
         '''
         
-        which_data = self.data if raw_data else self.raw_data
+        which_data = self.raw_data if raw_data else self.data
         _data_fold = np.vstack([which_data['c00{}'.format(f)] for f in fold_idx])
-        if randomize:
-            data_fold = _data_fold[np.random.permutation(_data_fold.shape[0])]
+        _targets_fold = np.hstack([self.targets['c00{}'.format(f)] for f in fold_idx])
         
-        return data_fold
+        if randomize:
+            ind_perm = np.random.permutation(_data_fold.shape[0])
+            data_fold = _data_fold[ind_perm]
+            targets_fold = _targets_fold[ind_perm]
+
+        return data_fold, targets_fold
     
     def basic_dataviz(self, fold_idx=[0, 1, 2, 3]):
         '''
@@ -235,7 +244,7 @@ class PeptideDataset:
         '''
         
         # get the folds of interest 
-        data = self.get_fold(fold_idx, raw_data=True)
+        data, _ = self.get_fold(fold_idx, raw_data=True)
         
         # histogram of peptide lengths
         pep_len = []
@@ -265,3 +274,15 @@ class PeptideDataset:
         plt.bar(fold_idx, fold_size)
         plt.xticks(np.arange(0, 5))
         plt.show()
+        
+class Dataset:
+    def __init__(self, data, targets):
+        self.data = data
+        self.targets = targets
+        
+    def __getitem__(self, index):
+        item = {'peptide': self.data[index], 'target': self.targets[index]}
+        return item
+    
+    def __len__(self):
+        return self.data.shape[0]

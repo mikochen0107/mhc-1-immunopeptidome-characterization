@@ -30,7 +30,7 @@ class MultilayerPerceptron(nn.Module):
         self.hidden.append(nn.Linear(input_size, hidden_layer_size))  # first hidden layer
         for _ in range(1, num_hidden_layers):
             self.hidden.append(nn.Linear(hidden_layer_size, hidden_layer_size))  # fully-connected hidden layers
-        self.hidden.append(nn.Linear(hidden_layer_size, 2))  # output layer
+        self.hidden.append(nn.Linear(hidden_layer_size, 1))  # output layer
         
     def forward(self, x):
         '''
@@ -44,6 +44,9 @@ class MultilayerPerceptron(nn.Module):
 
         for i in range(self.num_hid):
             x = F.relu(self.hidden[i](x))
-        x = self.hidden[-1](x)
+        x = torch.sigmoid(self.hidden[-1](x))  # classification output
         
         return x
+
+    def get_my_name(self):
+        return "mlp"
