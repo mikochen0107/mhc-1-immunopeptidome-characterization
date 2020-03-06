@@ -9,9 +9,9 @@ import torch.nn.functional as F
 import torch.optim as optim
 
 
-PATH = '../store'
+STORE_PATH = '../store'
 
-def train_nn(model, peploader, criterion=None, optimizer=None, scheduler=None, num_epochs=25, learning_rate=1e-2):
+def train_nn(model, peploader, hla_allele, fold_idx, criterion=None, optimizer=None, scheduler=None, num_epochs=25, learning_rate=1e-2, save_results=True):
     '''
     Train neural network using gradient descent and backprop
 
@@ -28,7 +28,7 @@ def train_nn(model, peploader, criterion=None, optimizer=None, scheduler=None, n
     if optimizer == None:
         optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     
-    for _ in range(num_epochs):
+    for e in range(num_epochs):
         running_loss = 0
 
         for item in peploader:
@@ -43,14 +43,39 @@ def train_nn(model, peploader, criterion=None, optimizer=None, scheduler=None, n
             
             running_loss += loss.item()
         
-        print('Training loss: {0}, time elapsed: {1} s'.format(running_loss / len(peploader), time.time() - since))
+        print('epoch {0} \t train loss {1} \t time {2} s'.format(e, round(running_loss / len(peploader), 5), round(time.time() - since, 5)))
 
-    save_model(model)
+    if save_results:
+        folder = save_model(model, hla_allele, fold_idx)
+        return folder
+    return None
 
-def save_model(model):
+def save_model(model, hla_allele, fold_idx):
+    '''
+    Saves model trained state and history of training and validation metrics.
+
+    Parameters
+    ----------
+    model: nn.Module
+        Trained neural network
+
+    hla_allele: string
+        Name of the MHC allele used for training
+    
+    fold_idx: list
+        Indices of folds used for training
+    '''
+
     name = model.get_my_name()
-    dt = datetime.now().strftime("{}-%y%m%d-%H%M%S".format(name))
-    os.mkdir(os.path.join(PATH, dt))
-    filename = os.path.join(PATH, dt, 'model_state_dict')
+    allele = hla_allele[4:].lower()  # crop the "hla-" part since they all share the same 
+    train_folds = ''.join(sorted([str(c) for c in fold_idx]))
+
+    # storage format is model_name - hla_allele - fold indices - date, time of model save
+    dt = datetime.now().strftime('%y%m%d%H%M%S')
+    folder = '{0}-{1}-{2}-'.format(name, allele, train_folds) + dt
+    os.mkdir(os.path.join(STORE_PATH, folder))
+    filename = os.path.join(STORE_PATH, folder, 'model_state_dict')
     torch.save(model.state_dict(), filename)
+
+    return os.path.join(STORE_PATH, folder)
 
