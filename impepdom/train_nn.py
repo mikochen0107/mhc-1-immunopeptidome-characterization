@@ -73,7 +73,7 @@ def save_model(model, hla_allele, fold_idx):
     # storage format is model_name - hla_allele - fold indices - date, time of model save
     dt = datetime.now().strftime('%y%m%d%H%M%S')
     folder = '{0}-{1}-{2}-'.format(name, allele, train_folds) + dt
-    os.mkdir(os.path.join(STORE_PATH, folder))
+    os.makedirs(os.path.join(STORE_PATH, folder), exist_ok=True)
     filename = os.path.join(STORE_PATH, folder, 'model_state_dict')
     torch.save(model.state_dict(), filename)
 
