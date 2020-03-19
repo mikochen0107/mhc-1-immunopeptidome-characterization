@@ -10,7 +10,7 @@ STORE_PATH = '../store'
 
 def run_experiment(
     model, hla_allele='HLA-A01:01', train_fold_idx=[0, 1, 2], val_fold_idx=[3], padding='after2',
-    criterion=None, optimizer=None, scheduler=None, num_epochs=25, learning_rate=1e-2,
+    criterion=None, optimizer=None, scheduler=None, num_epochs=25, learning_rate=1e-2, show_output=True
 ):
     '''
     Run a neural network training on specified train and validation set, with parameters.
@@ -35,6 +35,9 @@ def run_experiment(
     num_epochs: int, optional
     learning_rate: float, optional
 
+    show_output: bool
+        Show output of training process (everything will be saved anyway)
+
     Returns
     ----------
     save_path: string
@@ -54,7 +57,7 @@ def run_experiment(
         optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
     # train the model, collect data
-    train_history = impepdom.train_nn(
+    model, train_history = impepdom.train_nn(
         model=model,
         peploader=peploader,
         criterion=criterion,
@@ -72,7 +75,7 @@ def run_experiment(
 
     # save validation predictions
     val = {}
-    data, val['trgt'] = hla_a01_01.get_fold(val_fold_idx)
+    data, val['target'] = hla_a01_01.get_fold(val_fold_idx)
     val['pred'] = mlp(torch.tensor(data).float())
     pickle_dump(val, save_folder, 'validation_' + list_to_str(val_fold_idx))
 
