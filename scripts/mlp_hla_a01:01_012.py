@@ -13,4 +13,4 @@ import torch
 
 
 model = impepdom.MultilayerPerceptron()
-impepdom.run_experiment(model, learning_rate=3)
+impepdom.run_experiment(model, learning_rate=3e-2, num_epochs=45)
