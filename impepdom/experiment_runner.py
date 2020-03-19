@@ -1,8 +1,9 @@
+import os
 import pickle
+from datetime import datetime
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
 
 import impepdom
@@ -11,8 +12,8 @@ import impepdom
 STORE_PATH = '../store'
 
 def run_experiment(
-    model, hla_allele='HLA-A01:01', train_fold_idx=[0, 1, 2], val_fold_idx=[3], padding='after2',
-    criterion=None, optimizer=None, scheduler=None, num_epochs=25, learning_rate=1e-2, show_output=True
+    model, hla_allele='HLA-A01:01', train_fold_idx=[0, 1, 2], val_fold_idx=[3], padding='after2', toy=False,
+    criterion=None, optimizer=None, scheduler=None, num_epochs=25, learning_rate=3, show_output=True
 ):
     '''
     Run a neural network training on specified train and validation set, with parameters.
@@ -31,6 +32,11 @@ def run_experiment(
     val_fold_idx: list, optional
         List of number (from 0 to 4) to specify validation folds
 
+    padding:
+    
+    toy: bool
+        Load partial dataset
+
     criterion: nn.Loss, optional
     optimizer: torch.optim, optional
     scheduler
@@ -42,15 +48,15 @@ def run_experiment(
 
     Returns
     ----------
-    save_path: string
+    save_folder: string
         Relative path where the cache is located
     '''
 
     # obtain torch dataloader for batch learning
-    dataset = impepdom.PeptideDataset(hla_allele, padding=padding, toy=False)
+    dataset = impepdom.PeptideDataset(hla_allele, padding=padding, toy=toy)
     peploader = {}
-    peploader['train'] = dataset.get_peptide_dataloader(train_fold_idx)
-    peploader['val'] = dataset.get_peptide_dataloader(val_fold_idx)
+    peploader['train'] = dataset.get_peptide_dataloader(fold_idx=train_fold_idx)
+    peploader['val'] = dataset.get_peptide_dataloader(fold_idx=val_fold_idx)
 
     # set up optimization criterion and optimization algorithm
     if criterion == None:
@@ -65,11 +71,10 @@ def run_experiment(
         criterion=criterion,
         optimizer=optimizer,
         num_epochs=num_epochs,
-        learning_rate=learning_rate,
-        save_results=True)
+        learning_rate=learning_rate)
 
     # save model
-    save_folder = get_save_path(hla_allele, train_fold_idx)
+    save_folder = get_save_path(model, hla_allele, train_fold_idx)
     torch.save(model.state_dict(), os.path.join(save_folder, 'torch_model'))
     
     # save training history
@@ -77,11 +82,13 @@ def run_experiment(
 
     # save validation predictions
     val = {}
-    data, val['target'] = hla_a01_01.get_fold(val_fold_idx)
-    val['pred'] = mlp(torch.tensor(data).float())
+    data, val['target'] = dataset.get_fold(val_fold_idx)
+    val['pred'] = model(torch.tensor(data).float())
     pickle_dump(val, save_folder, 'validation_' + list_to_str(val_fold_idx))
 
-def get_save_path(hla_allele, train_fold_idx):
+    return save_folder
+
+def get_save_path(model, hla_allele, train_fold_idx):
     '''
     Saves model trained state and history of training and validation metrics.
 
@@ -112,8 +119,8 @@ def get_save_path(hla_allele, train_fold_idx):
     return path_to_folder
 
 def list_to_str(ls):
-    str = ''.join(sorted([str(c) for c in ls]))
-    return str
+    _str = ''.join(sorted([str(c) for c in ls]))
+    return _str
 
 def pickle_dump(data, save_folder, filename):
     path = os.path.join(save_folder, filename)

@@ -1,12 +1,9 @@
 import os
 import time
-from datetime import datetime
+import copy
 
 import torch
-from torch.autograd import Variable
 import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
 
 def train_nn(model, peploader, criterion, optimizer, scheduler=None, num_epochs=25, learning_rate=1e-2, show_output=True):
     '''
@@ -29,15 +26,17 @@ def train_nn(model, peploader, criterion, optimizer, scheduler=None, num_epochs=
 
     since = time.time()
     train_history = init_train_hist()
+    best_model_wts = copy.deepcopy(model.state_dict())
+    best_acc = 0.0  # change to AUC
     
     for e in range(num_epochs):
-        print('epoch {}/{} at {:.4f}'.format(e, num_epochs - 1, time.time() - since))
+        print('epoch {}/{} at {:.4f}s'.format(e, num_epochs - 1, time.time() - since))
         for phase in ['train', 'val']:
             if phase == 'train':
                 model.train()  # set model to training mode
             else:
-                model.eval(()  # set model to evaluation mode
-
+                model.eval()  # set model to evaluation mode
+            
             count = 0  # just use length of data
             running_loss = 0.0
             running_acc = 0.0
@@ -56,17 +55,16 @@ def train_nn(model, peploader, criterion, optimizer, scheduler=None, num_epochs=
                         loss.backward()
                         optimizer.step()
                 
-                running_loss += loss.item() * pep.size[0]
-                running_acc += torch.sum(preds == target) # change to AUC
-                count += 1
+                running_loss += loss.item() * pep.size(0)
+                running_acc += torch.sum(preds.view(-1, 1) == target)  # change to AUC
+                count += pep.size(0)
             
             # add epoch metrics to training history
             epoch_loss = running_loss / count
             epoch_acc = running_acc / count
             train_history[phase]['loss'].append(epoch_loss)
-            train_history[phase]['acc'].append()
+            train_history[phase]['acc'].append(epoch_acc)
             
-            stdout.flush()  # before printing
             print('{} loss: {:.4f} accuracy: {:.4f}'.format(
                 phase, epoch_loss, epoch_acc))
 

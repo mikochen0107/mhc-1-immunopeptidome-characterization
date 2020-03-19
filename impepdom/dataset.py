@@ -85,8 +85,8 @@ class PeptideDataset:
         
         for file in files:
             content = np.loadtxt(os.path.join(self.root, self.hla_allele, file), dtype='str')
-            raw_data[file] = (content[:, 0] if not self.toy else content[:100, 0]).astype('str')
-            targets[file] = (content[:, 1] if not self.toy else content[:100, 1]).astype(float)
+            raw_data[file] = (content[:, 0] if not self.toy else content[:1024, 0]).astype('str')
+            targets[file] = (content[:, 1] if not self.toy else content[:1024, 1]).astype(float)
         
         data = {}
         for file in files:
@@ -218,7 +218,7 @@ class PeptideDataset:
         which_data = self.raw_data if raw_data else self.data
         _data_fold = np.vstack([which_data['c00{}'.format(f)] for f in fold_idx])
         _targets_fold = np.hstack([self.targets['c00{}'.format(f)] for f in fold_idx])
-        
+
         if randomize:
             ind_perm = np.random.permutation(_data_fold.shape[0])
             data_fold = _data_fold[ind_perm]
