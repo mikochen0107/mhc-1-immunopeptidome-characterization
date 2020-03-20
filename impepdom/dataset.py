@@ -69,6 +69,9 @@ class PeptideDataset:
 
         return peploader
 
+    def get_allele(self):
+        return self.hla_allele
+
     ### (end) Neural network training related methods ###
        
     def parse_csv(self):

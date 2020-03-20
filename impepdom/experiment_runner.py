@@ -17,7 +17,7 @@ import impepdom
 STORE_PATH = '../store'
 
 def run_experiment(
-    model, hla_allele, train_fold_idx, val_fold_idx=None, padding='after2', toy=False,
+    model, dataset, train_fold_idx, val_fold_idx=None,
     criterion=None, optimizer=None, scheduler=None,
     batch_size=64, num_epochs=25, learning_rate=1e-3, show_output=True
 ):
@@ -29,19 +29,14 @@ def run_experiment(
     model: nn.Module
         Defined neural network
 
-    hla_allele: string
-        Name of the folder corresponding to MHC I allele. Input example: 'HLA-A01:01'
+    dataset: impepdom.PeptideDataset
+        Initialized peptide dataset for MHC I
 
     train_fold_idx: list
         List of number (from 0 to 4) to specify training folds
 
     val_fold_idx: list, optional
         List of number (from 0 to 4) to specify validation folds
-
-    padding:
-    
-    toy: bool
-        Load partial dataset
 
     criterion: nn.Loss, optional
     scheduler: torch.optim.lr_scheduler, optional
@@ -57,12 +52,14 @@ def run_experiment(
     save_folder: string
         Relative path where the cache is located
     '''
+    
+    need_validation = False if val_fold_idx is None else True
 
     # obtain torch dataloader for batch learning
-    dataset = impepdom.PeptideDataset(hla_allele, padding=padding, toy=toy)
     peploader = {}
     peploader['train'] = dataset.get_peptide_dataloader(fold_idx=train_fold_idx, batch_size=batch_size)
-    peploader['val'] = dataset.get_peptide_dataloader(fold_idx=val_fold_idx, batch_size=batch_size)
+    if need_validation:
+        peploader['val'] = dataset.get_peptide_dataloader(fold_idx=val_fold_idx, batch_size=batch_size)
 
     # set up optimization criterion, optimization algorithm, and learning rate decay
     if criterion == None:
@@ -80,7 +77,7 @@ def run_experiment(
     baseline_metrics = get_baseline_metrics(dataset, train_fold_idx, val_fold_idx)
 
     # train the model, collect data
-    need_validation = False if val_fold_idx is None else True
+    
     model, train_history = impepdom.train_nn(
         model=model,
         peploader=peploader,
@@ -92,17 +89,18 @@ def run_experiment(
         validation=need_validation)
 
     # save model
-    save_folder = get_save_path(model, hla_allele, train_fold_idx)
+    save_folder = get_save_path(model, dataset.get_allele(), train_fold_idx)
     torch.save(model.state_dict(), os.path.join(save_folder, 'torch_model'))
     
     # save training history
     pickle_dump(train_history, save_folder, 'train_history')
 
     # save validation predictions
-    val = {}
-    data, val['target'] = dataset.get_fold(val_fold_idx)
-    val['pred'] = model(torch.tensor(data).float())
-    pickle_dump(val, save_folder, 'validation_' + list_to_str(val_fold_idx))
+    if need_validation:
+        val = {}
+        data, val['target'] = dataset.get_fold(val_fold_idx)
+        val['pred'] = model(torch.tensor(data).float())
+        pickle_dump(val, save_folder, 'validation_' + list_to_str(val_fold_idx))
 
     return save_folder, baseline_metrics
 
