@@ -70,7 +70,7 @@ def run_experiment(
     if optimizer == None:
         optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     if scheduler == None:
-        steps = 10
+        steps = 25
         scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, steps)
         # lr_decay_step = 5
         # decay_factor = 0.9
