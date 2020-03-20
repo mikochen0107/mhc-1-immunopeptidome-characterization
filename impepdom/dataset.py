@@ -9,8 +9,8 @@ import torch
 
 class PeptideDataset:
     ROOT = '../datasets/MHC_I_el_allele_specific'.format(__file__)  # root directory containing peptide binding data
-    ALL_AA = ['A', 'R', 'N', 'D', 'C', 'E', 'Q', 'G', 'H', 'I', 'L', 'K', 'M', 'F', 'P', 'S', 'T', 'W', 'Y', 'V']
-    NUM_AA = len(ALL_AA)  # number of amino acids (20)
+    ALL_AA = ['A', 'R', 'N', 'D', 'C', 'E', 'Q', 'G', 'H', 'I', 'L', 'K', 'M', 'F', 'P', 'S', 'T', 'W', 'Y', 'V', 'U']
+    NUM_AA = len(ALL_AA)  # number of amino acids (21)
     
     def __init__(self, hla_allele, root=None, encoding='default', max_aa_len=14, padding='end', test_set='c004', input_format='linear', toy=False):
         '''
@@ -85,7 +85,7 @@ class PeptideDataset:
         '''
         
         files = os.listdir(os.path.join(self.root, self.hla_allele))
-        files.remove(self.test_set)  # remove test set
+        # files.remove(self.test_set)  # remove test set
         
         raw_data = {}
         targets = {}

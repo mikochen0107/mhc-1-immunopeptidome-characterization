@@ -36,9 +36,9 @@ def train_nn(model, peploader, criterion, optimizer, scheduler=None, num_epochs=
     phases = ['train']
     if validation == True:
         phases.append('val')
-    
+
     for e in range(num_epochs):
-        print('epoch {}/{} started at {:.4f} s'.format(e, num_epochs - 1, time.time() - since))
+        print('epoch {}/{} started at {:.4f} s'.format(e + 1, num_epochs, time.time() - since))
         for phase in phases:
             if phase == 'train':
                 model.train()  # set model to training mode
