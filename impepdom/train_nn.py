@@ -5,7 +5,7 @@ import copy
 import torch
 import torch.nn as nn
 
-def train_nn(model, peploader, criterion, optimizer, scheduler=None, num_epochs=25, learning_rate=1e-2, show_output=True):
+def train_nn(model, peploader, criterion, optimizer, scheduler=None, num_epochs=25, learning_rate=1e-2, validation=True, show_output=True):
     '''
     Train neural network using gradient descent and backprop
 
@@ -29,9 +29,14 @@ def train_nn(model, peploader, criterion, optimizer, scheduler=None, num_epochs=
     best_model_wts = copy.deepcopy(model.state_dict())
     best_acc = 0.0  # change to AUC
     
+    # enable training on whole dataset after all validations
+    phases = ['train']
+    if validation == True:
+        phases.append('val')
+    
     for e in range(num_epochs):
-        print('epoch {}/{} at {:.4f}s'.format(e, num_epochs - 1, time.time() - since))
-        for phase in ['train', 'val']:
+        print('epoch {}/{} started at {:.4f}s'.format(e, num_epochs - 1, time.time() - since))
+        for phase in phases:
             if phase == 'train':
                 model.train()  # set model to training mode
             else:
@@ -71,17 +76,30 @@ def train_nn(model, peploader, criterion, optimizer, scheduler=None, num_epochs=
             if phase == 'val' and epoch_acc > best_acc:
                 best_acc = epoch_acc
                 best_model_wts = copy.deepcopy(model.state_dict())
+            elif not validation:  # just take the latest best result
+                best_acc = epoch_acc
+                best_model_wts = copy.deepcopy(model.state_dict())
+
         print()  # empty line
 
     time_elapsed = time.time() - since
-    print('training complete in {:.0f}m {:.0f}s'.format(
+    print('training completed in {:.0f}m {:.4f}s'.format(
         time_elapsed // 60, time_elapsed % 60))
-    print('best validation acc: {:4f}'.format(best_acc))
+    print('best validation acc: {:.4f}'.format(best_acc))
 
     model.load_state_dict(best_model_wts)
     return model, train_history
 
 def init_train_hist():
+    '''
+    Get a placeholder for a training logs storage.
+
+    Returns
+    ----------
+    train_history: dict
+        Dictionary to contain training (and validation) metric logs over epochs
+    '''
+
     metrics = ['loss', 'acc', 'auc', 'auc0.1', 'pcc']
     train_history = {
         'train': {},

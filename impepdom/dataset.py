@@ -62,7 +62,7 @@ class PeptideDataset:
         class_count = [len(targets == 0), len(targets == 1)]  # counts of class 0, count of class 1
         weights = 1.0 / torch.Tensor(class_count)
         sample_weights = np.array([weights[int(t)] for t in targets])
-        sampler = torch.utils.data.sampler.WeightedRandomSampler(sample_weights, batch_size)
+        sampler = torch.utils.data.sampler.WeightedRandomSampler(sample_weights, len(sample_weights))
 
         peploader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, sampler=sampler)
 
