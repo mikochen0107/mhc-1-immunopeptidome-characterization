@@ -5,9 +5,11 @@ from datetime import datetime
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from torch.optim import lr_scheduler
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
+from sklearn.metrics import roc_auc_score
 
 import impepdom
 
@@ -16,7 +18,8 @@ STORE_PATH = '../store'
 
 def run_experiment(
     model, hla_allele, train_fold_idx, val_fold_idx=None, padding='after2', toy=False,
-    criterion=None, optimizer=None, scheduler=None, num_epochs=25, learning_rate=1e-3, show_output=True
+    criterion=None, optimizer=None, scheduler=None,
+    batch_size=64, num_epochs=25, learning_rate=1e-3, show_output=True
 ):
     '''
     Run a neural network training on specified train and validation set, with parameters.
@@ -41,8 +44,8 @@ def run_experiment(
         Load partial dataset
 
     criterion: nn.Loss, optional
-    optimizer: torch.optim, optional
-    scheduler
+    scheduler: torch.optim.lr_scheduler, optional
+    batch_size: int, optional
     num_epochs: int, optional
     learning_rate: float, optional
 
@@ -58,14 +61,18 @@ def run_experiment(
     # obtain torch dataloader for batch learning
     dataset = impepdom.PeptideDataset(hla_allele, padding=padding, toy=toy)
     peploader = {}
-    peploader['train'] = dataset.get_peptide_dataloader(fold_idx=train_fold_idx)
-    peploader['val'] = dataset.get_peptide_dataloader(fold_idx=val_fold_idx)
+    peploader['train'] = dataset.get_peptide_dataloader(fold_idx=train_fold_idx, batch_size=batch_size)
+    peploader['val'] = dataset.get_peptide_dataloader(fold_idx=val_fold_idx, batch_size=batch_size)
 
-    # set up optimization criterion and optimization algorithm
+    # set up optimization criterion, optimization algorithm, and learning rate decay
     if criterion == None:
         criterion = nn.BCELoss()
     if optimizer == None:
         optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    if scheduler == None:
+        lr_decay_step = 5
+        decay_factor = 1  # don't decay for now
+        exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=lr_decay_step, gamma=decay_factor)
 
     # collect baseline metrics
     baseline_metrics = get_baseline_metrics(dataset, train_fold_idx, val_fold_idx)
@@ -77,6 +84,7 @@ def run_experiment(
         peploader=peploader,
         criterion=criterion,
         optimizer=optimizer,
+        scheduler=exp_lr_scheduler,
         num_epochs=num_epochs,
         learning_rate=learning_rate,
         validation=need_validation)
@@ -121,10 +129,10 @@ def plot_train_history(train_history, baseline_metrics=None, metrics=['loss', 'a
         plt.plot(range(num_epochs), train_history['train'][metric], color='skyblue', label='train')
         if val_exists:
             plt.plot(range(num_epochs), train_history['val'][metric], color='darkorange', label='val')
-        if baseline_metrics and metric == 'acc':
-            plt.axhline(y=baseline_metrics['train']['acc'], color='skyblue', alpha=0.7, linestyle='--', label='train base')
+        if baseline_metrics and metric != 'loss':
+            plt.axhline(y=baseline_metrics['train'][metric], color='skyblue', alpha=0.7, linestyle='--', label='train base')
             if 'acc' in baseline_metrics['val']:
-                plt.axhline(y=baseline_metrics['val']['acc'], color='darkorange', alpha=0.7, linestyle='--', label='val base')
+                plt.axhline(y=baseline_metrics['val'][metric], color='darkorange', alpha=0.7, linestyle='--', label='val base')
 
         plt.ylabel(metric)
         plt.xlabel('epoch')
@@ -145,8 +153,10 @@ def get_baseline_metrics(dataset, train_fold_idx, val_fold_idx):
         val_zeros = np.zeros(val_targets.shape)
 
     baseline_metrics['train']['acc'] = np.sum((train_targets == train_zeros)) / len(train_zeros)
+    baseline_metrics['train']['auc'] = roc_auc_score(train_targets, train_zeros)
     if val_fold_idx:
         baseline_metrics['val']['acc'] = np.sum((val_targets == val_zeros)) / len(val_zeros)
+        baseline_metrics['val']['auc'] = roc_auc_score(val_targets, val_zeros)
 
     return baseline_metrics
 

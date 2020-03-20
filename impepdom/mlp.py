@@ -30,7 +30,7 @@ class MultilayerPerceptron(nn.Module):
 
         self.hidden.append(nn.Linear(input_size, hidden_layer_size))  # first hidden layer
         for _ in range(1, num_hidden_layers):
-            self.dropout.append(nn.Dropout(p=0.15))  
+            self.dropout.append(nn.Dropout(p=0.25))  
             self.hidden.append(nn.Linear(hidden_layer_size, hidden_layer_size))  # fully-connected hidden layers
         self.hidden.append(nn.Linear(hidden_layer_size, 1))  # output layer
         

@@ -1,5 +1,6 @@
 import os
 from collections import Counter
+import random
 
 import torch
 import numpy as np
@@ -29,7 +30,7 @@ class PeptideDataset:
         max_aa_len: int, optional
             
         padding: str, optional
-            Padding for amino acid sequence. Options: 'begin', 'end', 'after2', TBD
+            Padding for amino acid sequence. Options: 'begin', 'end', 'after2', 'flurry'
             
         test_set: str, optional
             Specify test set which should not be touched during model development.
@@ -199,6 +200,15 @@ class PeptideDataset:
             padded_seq = seq + pad_bits
         elif self.padding == 'after2':
             pos = 2 * bits
+            padded_seq = seq[:pos] + pad_bits + seq[pos:]
+        elif self.padding == 'flurry':
+            pep_len = len(seq) // bits
+            if pep_len < 9:  # pad after 3rd bit
+                pos = 4 * bits
+            elif pep_len == 9:
+                pos = (4 if random.random() < 0.5 else 5) * bits
+            else:
+                pos = 5 * bits
             padded_seq = seq[:pos] + pad_bits + seq[pos:]
             
         return padded_seq
