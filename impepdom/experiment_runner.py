@@ -7,6 +7,7 @@ import torch.nn as nn
 import torch.optim as optim
 import matplotlib
 import matplotlib.pyplot as plt
+import numpy as np
 
 import impepdom
 
@@ -66,6 +67,9 @@ def run_experiment(
     if optimizer == None:
         optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
+    # collect baseline metrics
+    baseline_metrics = get_baseline_metrics(dataset, train_fold_idx, val_fold_idx)
+
     # train the model, collect data
     need_validation = False if val_fold_idx is None else True
     model, train_history = impepdom.train_nn(
@@ -90,9 +94,9 @@ def run_experiment(
     val['pred'] = model(torch.tensor(data).float())
     pickle_dump(val, save_folder, 'validation_' + list_to_str(val_fold_idx))
 
-    return save_folder
+    return save_folder, baseline_metrics
 
-def plot_train_history(train_history, baseline_metrics=None, metrics=['loss', 'acc']):
+def plot_train_history(train_history, baseline_metrics=None, metrics=['loss', 'acc', 'auc']):
     '''
     Plot metrics to observe training (vs validation) progress.
 
@@ -113,18 +117,38 @@ def plot_train_history(train_history, baseline_metrics=None, metrics=['loss', 'a
     plt.figure(figsize=(16, 5))
     for i, metric in enumerate(metrics):
         plt.subplot(1, len(metrics), i + 1)
-        if baseline_metrics:
-            plt.axhline(y=baseline_metrics[metric], color='darkgrey', linestyle='--', label='base')
 
         plt.plot(range(num_epochs), train_history['train'][metric], color='skyblue', label='train')
         if val_exists:
             plt.plot(range(num_epochs), train_history['val'][metric], color='darkorange', label='val')
+        if baseline_metrics and metric == 'acc':
+            plt.axhline(y=baseline_metrics['train']['acc'], color='skyblue', alpha=0.7, linestyle='--', label='train base')
+            if 'acc' in baseline_metrics['val']:
+                plt.axhline(y=baseline_metrics['val']['acc'], color='darkorange', alpha=0.7, linestyle='--', label='val base')
 
         plt.ylabel(metric)
         plt.xlabel('epoch')
         plt.legend()
 
     plt.show()
+
+def get_baseline_metrics(dataset, train_fold_idx, val_fold_idx):
+    baseline_metrics = {
+        'train': {},
+        'val': {}
+    }
+
+    _, train_targets = dataset.get_fold(fold_idx=train_fold_idx)
+    train_zeros = np.zeros(train_targets.shape)
+    if val_fold_idx:
+        _, val_targets = dataset.get_fold(fold_idx=val_fold_idx)
+        val_zeros = np.zeros(val_targets.shape)
+
+    baseline_metrics['train']['acc'] = np.sum((train_targets == train_zeros)) / len(train_zeros)
+    if val_fold_idx:
+        baseline_metrics['val']['acc'] = np.sum((val_targets == val_zeros)) / len(val_zeros)
+
+    return baseline_metrics
 
 
 def load_trained_model(model, save_folder):

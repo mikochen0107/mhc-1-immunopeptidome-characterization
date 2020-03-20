@@ -4,6 +4,9 @@ import copy
 
 import torch
 import torch.nn as nn
+import numpy as np
+
+from sklearn.metrics import roc_auc_score
 
 def train_nn(model, peploader, criterion, optimizer, scheduler=None, num_epochs=25, learning_rate=1e-2, validation=True, show_output=True):
     '''
@@ -44,16 +47,27 @@ def train_nn(model, peploader, criterion, optimizer, scheduler=None, num_epochs=
             
             count = 0  # just use length of data
             running_loss = 0.0
-            running_acc = 0.0
+
+            y_actual = []
+            y_pred = []
 
             for item in peploader[phase]:
                 pep = item['peptide']
                 target = item['target'].view(-1, 1)
                 optimizer.zero_grad()
 
+                # storage for targets and predictions from batches
+               
+
                 with torch.set_grad_enabled(phase == 'train'):
-                    output = model(pep.float())
-                    _, preds = torch.max(output, 1)
+                    output = model(pep.float())                
+                    _pos = torch.ones(output.size())
+                    _neg = torch.zeros(output.size())
+                    preds = torch.where(output > 0.5, _pos, _neg)
+
+                    y_actual.append(target.numpy())
+                    y_pred.append(preds.numpy())
+
                     loss = criterion(output, target)
                     
                     if phase == 'train':
@@ -61,14 +75,19 @@ def train_nn(model, peploader, criterion, optimizer, scheduler=None, num_epochs=
                         optimizer.step()
                 
                 running_loss += loss.item() * pep.size(0)
-                running_acc += torch.sum(preds.view(-1, 1) == target)  # change to AUC
                 count += pep.size(0)
             
             # add epoch metrics to training history
+            y_actual = np.vstack(y_actual)
+            y_pred = np.vstack(y_pred)
+
             epoch_loss = running_loss / count
-            epoch_acc = running_acc / count
+            epoch_acc = np.sum(y_actual == y_pred) / count
+            epoch_auc = roc_auc_score(y_actual, y_pred)
+
             train_history[phase]['loss'].append(epoch_loss)
             train_history[phase]['acc'].append(epoch_acc)
+            train_history[phase]['auc'].append(epoch_auc)
             
             print('{} loss: {:.4f} accuracy: {:.4f}'.format(
                 phase, epoch_loss, epoch_acc))
