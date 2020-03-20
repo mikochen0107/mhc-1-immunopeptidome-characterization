@@ -5,7 +5,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 
 class MultilayerPerceptron(nn.Module):
-    def __init__(self, input_size=280, num_hidden_layers=2, hidden_layer_size=20):
+    def __init__(self, input_size=294, num_hidden_layers=2, hidden_layer_size=20):
         '''
         Initialize an `num_hidden_layers + 2` neural network.
 
