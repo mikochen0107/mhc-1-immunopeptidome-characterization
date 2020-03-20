@@ -20,7 +20,7 @@ save_folder, baseline_metrics = impepdom.run_experiment(
     train_fold_idx=[0, 1, 2, 3],
     val_fold_idx=[4],
     learning_rate=2e-3,
-    num_epochs=15,
+    num_epochs=5,
     batch_size=128,
     toy=False)
 
