@@ -28,9 +28,10 @@ class MultilayerPerceptron(nn.Module):
         self.hidden = nn.ModuleList()  # initialize list of layers
         self.dropout = nn.ModuleList()  # initialize list of dropout-able layers
 
+        self.dropout.append(nn.Dropout(p=0.9))  # dropout for input layer
         self.hidden.append(nn.Linear(input_size, hidden_layer_size))  # first hidden layer
         for _ in range(1, num_hidden_layers):
-            self.dropout.append(nn.Dropout(p=0.25))  
+            self.dropout.append(nn.Dropout(p=0.65))  # dropout for hidden layers
             self.hidden.append(nn.Linear(hidden_layer_size, hidden_layer_size))  # fully-connected hidden layers
         self.hidden.append(nn.Linear(hidden_layer_size, 1))  # output layer
         
@@ -45,10 +46,7 @@ class MultilayerPerceptron(nn.Module):
         '''
 
         for i in range(self.num_hid):
-            if i == 0:
-                x = F.relu(self.hidden[i](x))
-            else:  # dropout is one index behind
-                x = F.relu(self.dropout[i - 1](self.hidden[i](x)))
+            x = F.relu(self.dropout[i](self.hidden[i](x)))
 
         x = torch.sigmoid(self.hidden[-1](x))  # classification output
         

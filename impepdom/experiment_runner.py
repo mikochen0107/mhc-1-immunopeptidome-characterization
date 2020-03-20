@@ -70,9 +70,11 @@ def run_experiment(
     if optimizer == None:
         optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     if scheduler == None:
-        lr_decay_step = 5
-        decay_factor = 1  # don't decay for now
-        exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=lr_decay_step, gamma=decay_factor)
+        steps = 10
+        scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, steps)
+        # lr_decay_step = 5
+        # decay_factor = 0.9
+        # exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=lr_decay_step, gamma=decay_factor)
 
     # collect baseline metrics
     baseline_metrics = get_baseline_metrics(dataset, train_fold_idx, val_fold_idx)
@@ -84,7 +86,7 @@ def run_experiment(
         peploader=peploader,
         criterion=criterion,
         optimizer=optimizer,
-        scheduler=exp_lr_scheduler,
+        scheduler=scheduler,
         num_epochs=num_epochs,
         learning_rate=learning_rate,
         validation=need_validation)
@@ -130,9 +132,9 @@ def plot_train_history(train_history, baseline_metrics=None, metrics=['loss', 'a
         if val_exists:
             plt.plot(range(num_epochs), train_history['val'][metric], color='darkorange', label='val')
         if baseline_metrics and metric != 'loss':
-            plt.axhline(y=baseline_metrics['train'][metric], color='skyblue', alpha=0.7, linestyle='--', label='train base')
+            plt.axhline(y=baseline_metrics['train'][metric] + 1e-3, color='skyblue', alpha=0.7, linestyle='--', label='train base')
             if 'acc' in baseline_metrics['val']:
-                plt.axhline(y=baseline_metrics['val'][metric], color='darkorange', alpha=0.7, linestyle='--', label='val base')
+                plt.axhline(y=baseline_metrics['val'][metric] - 1e-3, color='darkorange', alpha=0.7, linestyle='--', label='val base')
 
         plt.ylabel(metric)
         plt.xlabel('epoch')

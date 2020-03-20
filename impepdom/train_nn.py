@@ -48,25 +48,26 @@ def train_nn(model, peploader, criterion, optimizer, scheduler=None, num_epochs=
             count = 0  # just use length of data
             running_loss = 0.0
 
+            # storage for targets and predictions from batches
             y_actual = []
             y_pred = []
+            y_proba = []
 
             for item in peploader[phase]:
                 pep = item['peptide']
                 target = item['target'].view(-1, 1)
                 optimizer.zero_grad()
-
-                # storage for targets and predictions from batches
                
-
                 with torch.set_grad_enabled(phase == 'train'):
                     output = model(pep.float())                
                     _pos = torch.ones(output.size())
                     _neg = torch.zeros(output.size())
                     preds = torch.where(output > 0.5, _pos, _neg)
+                    proba = output.detach()
 
                     y_actual.append(target.numpy())
                     y_pred.append(preds.numpy())
+                    y_proba.append(proba.numpy())
 
                     loss = criterion(output, target)
                     
@@ -81,10 +82,11 @@ def train_nn(model, peploader, criterion, optimizer, scheduler=None, num_epochs=
             # add epoch metrics to training history
             y_actual = np.vstack(y_actual)
             y_pred = np.vstack(y_pred)
+            y_proba = np.vstack(y_proba)
 
             epoch_loss = running_loss / count
             epoch_acc = np.sum(y_actual == y_pred) / count
-            epoch_auc = roc_auc_score(y_actual, y_pred)
+            epoch_auc = roc_auc_score(y_actual, y_proba)  # use y score to evaluate roc auc
 
             train_history[phase]['loss'].append(epoch_loss)
             train_history[phase]['acc'].append(epoch_acc)

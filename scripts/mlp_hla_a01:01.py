@@ -12,17 +12,17 @@ import impepdom
 import torch
 
 
-model = impepdom.MultilayerPerceptron(num_hidden_layers=2, hidden_layer_size=50)
+model = impepdom.MultilayerPerceptron(num_hidden_layers=2, hidden_layer_size=100)
 save_folder, baseline_metrics = impepdom.run_experiment(
     model,
     hla_allele='HLA-A01:01',
     padding='flurry',
     train_fold_idx=[0, 1, 2],
     val_fold_idx=[3],
-    learning_rate=5e-3,
-    num_epochs=45,
+    learning_rate=3e-2,
+    num_epochs=7,
     batch_size=128,
-    toy=True)
+    toy=False)
 
 trained_model, train_history = impepdom.load_trained_model(model, save_folder)
 impepdom.plot_train_history(train_history, baseline_metrics)
