@@ -8,11 +8,11 @@ import matplotlib.pyplot as plt
 import pickle
 
 from sklearn.metrics import roc_auc_score
-import impepdom
 import torch
+import impepdom
+from impepdom import models
 
-
-model = impepdom.MultilayerPerceptron(num_hidden_layers=2, hidden_layer_size=100)
+model = impepdom.models.MultilayerPerceptron(num_hidden_layers=2, hidden_layer_size=100)
 dataset = impepdom.PeptideDataset(
     hla_allele='HLA-A01:01',
     padding='flurry',
