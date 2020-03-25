@@ -10,6 +10,12 @@ STORE_PATH = '../store'
 def get_save_path(model, hla_allele, train_fold_idx):
     '''
     Saves model trained state and history of training and validation metrics.
+    Model outputs are uniquely stored in the a string composed of:
+        Model name,
+        HLA allele,
+        Folds used to train on,
+        Datetime of experiment;
+    Example: "/store/mlp_a01:01_012_200319174308".
 
     Parameters
     ----------
@@ -30,7 +36,7 @@ def get_save_path(model, hla_allele, train_fold_idx):
     train_folds = list_to_str(train_fold_idx)
 
     # storage format is model_name - hla_allele - fold indices - date, time of model save
-    dt = datetime.now().strftime('%y%m%d%H%M%S')
+    dt = datetime.now().strftime('%y%m%d%H%M%S')  # format is yymmddhhmmss
     folder = '{0}_{1}_{2}_'.format(name, allele, train_folds) + dt
     path_to_folder = os.path.join(STORE_PATH, folder)
     os.makedirs(path_to_folder, exist_ok=True)
