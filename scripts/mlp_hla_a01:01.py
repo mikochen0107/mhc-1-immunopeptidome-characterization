@@ -12,6 +12,7 @@ import torch
 import impepdom
 from impepdom import models
 
+
 model = impepdom.models.MultilayerPerceptron(num_hidden_layers=2, hidden_layer_size=100)
 dataset = impepdom.PeptideDataset(
     hla_allele='HLA-A01:01',
