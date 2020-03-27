@@ -38,7 +38,8 @@ def train_nn(model, peploader, criterion, optimizer, scheduler=None, num_epochs=
         phases.append('val')
 
     for e in range(num_epochs):
-        print('epoch {}/{} started at {:.4f} s'.format(e + 1, num_epochs, time.time() - since))
+        if show_output:
+            print('epoch {}/{} started at {:.4f} s'.format(e + 1, num_epochs, time.time() - since))
         for phase in phases:
             if phase == 'train':
                 model.train()  # set model to training mode
@@ -92,8 +93,9 @@ def train_nn(model, peploader, criterion, optimizer, scheduler=None, num_epochs=
             train_history[phase]['acc'].append(epoch_acc)
             train_history[phase]['auc'].append(epoch_auc)
             
-            print('{} loss: {:.4f} accuracy: {:.4f} auc: {:.4f}'.format(
-                phase, epoch_loss, epoch_acc, epoch_auc))
+            if show_output:
+                print('{} loss: {:.4f} accuracy: {:.4f} auc: {:.4f}'.format(
+                    phase, epoch_loss, epoch_acc, epoch_auc))
 
             if phase == 'val' and epoch_auc > best_auc:
                 best_auc = epoch_auc
@@ -101,13 +103,15 @@ def train_nn(model, peploader, criterion, optimizer, scheduler=None, num_epochs=
             elif not validation:  # just take the latest best result
                 best_auc = epoch_auc
                 best_model_wts = copy.deepcopy(model.state_dict())
-
-        print()  # empty line
+        
+        if show_output:
+            print()  # empty line
 
     time_elapsed = time.time() - since
-    print('training completed in {:.0f} m {:.4f} s'.format(
-        time_elapsed // 60, time_elapsed % 60))
-    print('best validation auc: {:.4f}'.format(best_auc))
+    if show_output:
+        print('training completed in {:.0f} m {:.4f} s'.format(
+            time_elapsed // 60, time_elapsed % 60))
+        print('best validation auc: {:.4f}'.format(best_auc))
 
     model.load_state_dict(best_model_wts)
     return model, train_history
