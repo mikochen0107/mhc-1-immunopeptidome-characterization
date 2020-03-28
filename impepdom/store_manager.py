@@ -2,12 +2,13 @@ import os
 import pickle
 from datetime import datetime
 
+import pandas as pd
 import torch
 
 
 STORE_PATH = os.path.join(os.getcwd(), '../store')
 
-def get_save_path(model, hla_allele, train_fold_idx):
+def get_save_path(model, hla_allele, train_fold_idx, which_model):
     '''
     Saves model trained state and history of training and validation metrics.
     Model outputs are uniquely stored in the a string composed of:
@@ -26,6 +27,9 @@ def get_save_path(model, hla_allele, train_fold_idx):
     train_fold_idx: list
         Indices of folds used for training
 
+    which_model: string
+        Datetime of model run to write into. Format: 'mlp_2x10_a01:01/200327_212136'
+
     Returns
     ----------
     folder: string
@@ -38,7 +42,10 @@ def get_save_path(model, hla_allele, train_fold_idx):
 
     # storage format is model_name-hla_allele/datetime_of_model_save/train-fold_indices
     dt = datetime.now().strftime('%y%m%d_%H%M%S')  # format is yymmdd_hhmmss
-    folder = '{0}_{1}/{2}/train_{3}'.format(name, allele, dt, train_folds)
+    if which_model == None:
+        folder = '{0}_{1}/{2}/train_{3}'.format(name, allele, dt, train_folds)
+    else:
+        folder = os.path.join(which_model, 'train_{0}'.format(train_folds))
 
     path_to_folder = os.path.join(STORE_PATH, folder)
     os.makedirs(path_to_folder, exist_ok=True)
@@ -78,6 +85,65 @@ def load_trained_model(model, folder):
 
     return model, train_history
 
+def update_hyperparams_store(results_store):
+    '''
+    Update .csv table of experiments with different hyperparameters.
+
+    Parameters
+    ----------
+    results_store: dict
+        Dictionary containing model name, hyperparam settings, and evaluation metrics
+    '''
+
+    # {
+    #     'model': folder,
+    #     'mean_' + _eval: np.mean(cross_eval),
+    #     'min_' + _eval: np.min(cross_eval),
+    #     'max_' + _eval: np.max(cross_eval),
+    #     'batch_size': batch_size,
+    #     'num_epochs': num_epochs,
+    #     'learning_rate': learning_rate,
+     #           }
+    
+    new_hyperparam_vals = get_hyperparams_store_template()
+    for res in results_store:
+        for key in new_hyperparam_vals:
+            if key in res:
+                new_hyperparam_vals[key].append(res[key])
+            else:
+                new_hyperparam_vals[key].append(None)
+
+    folder = results_store[0]['model']
+    new_hyperparam_df = pd.DataFrame(new_hyperparam_vals)
+    hyperparams_path = os.path.join(STORE_PATH, 'hyperparams', folder + '.csv')
+
+    if not os.path.exists(hyperparams_path):
+        new_hyperparam_df.to_csv(hyperparams_path)
+    else:
+        hyperparam_df = pd.read_csv(hyperparams_path)
+        hyperparam_df = pd.concat([new_hyperparam_df], ignore_index=True)
+        new_hyperparam_df.to_csv(hyperparams_path)
+
+def fetch_best_hyperparams(model_name, _eval):
+    '''
+    Retrieve best hyperparameter settings for a model based on evaluation metric.
+
+    Parameters
+    ----------
+    model_name: string
+        Model name from models.Model.get_my_name(). Format: 'mlp_2x100'
+
+    _eval: string
+        Evaluation metric. Options: 'acc', 'auc', 'auc_01', 'ppv'
+
+    Returns
+    ----------
+    hyperparams: dict
+        Dictionary containing hyperameter settings
+    '''
+
+    pass
+
 def pickle_dump(data, folder, filename):
     path = os.path.join(STORE_PATH, folder, filename)
     out = open(path, 'wb')
@@ -98,3 +164,43 @@ def extract_date(folder):
     path = folder[:path.find('/')]
     
     return path
+
+def extract_which_model(folder):
+    '''
+    Get folder upper of a chosen model training to write
+    multiple results of cross-validation.
+    '''
+
+    path = folder
+    path = path[:path.rfind('train')-1] 
+
+    return path
+
+def get_hyperparams_store_template():
+    '''
+    Return an empty pre-configured dictionary template to store hyperparameters. 
+
+    Returns
+    ----------
+    hyperparams: dict
+        Dictionary of model hyperparameters configuration and results.
+    '''
+
+    metrics = ['acc', 'auc', 'auc_01', 'ppv']
+    desc_stats = ['mean', 'min', 'max']
+
+    hyperparams = {
+        'model': [],
+        'batch_size': [],
+        'num_epochs': [],
+        'learning_rate': [],
+        'optimizer': [],
+        'scheduler': [],
+    }
+
+    # initilize space for metrics
+    for metric in metrics:
+        for desc_stat in desc_stats:
+            hyperparams[desc_stat + '_' + metric] = []
+
+    return hyperparams

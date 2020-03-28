@@ -90,10 +90,10 @@ def hyperparam_grid_search(
                     _, train_history = impepdom.load_trained_model(model, folder)
                     end_eval = min(end_eval, len(train_history['val'][_eval]))
                     cross_eval.append(np.mean(train_history['val'][_eval][-end_eval:]))  # get the last epochs for more representative score
-                    which_model = store_manager.extract_date(folder)  # to keep in the same folder
+                    which_model = store_manager.extract_which_model(folder)  # to keep in the same folder
                 
                 results_store.append({
-                    'model': folder,
+                    'model': folder[:folder.find('/')],
                     'mean_' + _eval: np.mean(cross_eval),
                     'min_' + _eval: np.min(cross_eval),
                     'max_' + _eval: np.max(cross_eval),
@@ -103,6 +103,7 @@ def hyperparam_grid_search(
                 })
 
     results_store.sort(key=(lambda model: model[sort_by + '_' + _eval]))
+    store_manager.update_hyperparams_store(results_store)
 
     time_elapsed = time.time() - since
     print('evaluation completed in {:.0f} m {:.4f} s'.format(
@@ -177,7 +178,6 @@ def run_experiment(
     baseline_metrics = get_baseline_metrics(dataset, train_fold_idx, val_fold_idx)
 
     # train the model, collect data
-    
     model, train_history = impepdom.train_nn(
         model=model,
         peploader=peploader,
@@ -191,7 +191,7 @@ def run_experiment(
     )
 
     # save model
-    folder = store_manager.get_save_path(model, dataset.get_allele(), train_fold_idx)
+    folder = store_manager.get_save_path(model, dataset.get_allele(), train_fold_idx, which_model=which_model)
     torch.save(model.state_dict(), os.path.join(STORE_PATH, folder, 'torch_model'))
     
     # save training history
@@ -202,7 +202,7 @@ def run_experiment(
         val = {}
         data, val['target'] = dataset.get_fold(val_fold_idx)
         val['pred'] = model(torch.tensor(data).float())
-        store_manager.pickle_dump(val, folder, 'validation_' + store_manager.list_to_str(val_fold_idx))
+        store_manager.pickle_dump(val, folder, 'val_' + store_manager.list_to_str(val_fold_idx))
 
     return folder, baseline_metrics
 

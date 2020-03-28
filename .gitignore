@@ -1,6 +1,6 @@
 datasets/MHC_I_el_allele_specific
 store/*
-!store/hyperparameters
+!store/hyperparams/*
 .DS_Store
 .ipynb_checkpoints
 .vscode

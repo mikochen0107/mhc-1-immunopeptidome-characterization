@@ -1,13 +1,6 @@
-import os
 import sys
 sys.path.append("..")  # add top folder to path
 
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-
-from sklearn.metrics import roc_auc_score, precision_score
-import torch
 import impepdom
 
 
