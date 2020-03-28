@@ -10,8 +10,8 @@ import torch
 
 class PeptideDataset:
     ROOT = '../datasets/MHC_I_el_allele_specific'.format(__file__)  # root directory containing peptide binding data
-    ALL_AA = ['A', 'R', 'N', 'D', 'C', 'E', 'Q', 'G', 'H', 'I', 'L', 'K', 'M', 'F', 'P', 'S', 'T', 'W', 'Y', 'V', 'U']
-    NUM_AA = len(ALL_AA)  # number of amino acids (21)
+    ALL_AA = ['A', 'R', 'N', 'D', 'C', 'E', 'Q', 'G', 'H', 'I', 'L', 'K', 'M', 'F', 'P', 'S', 'T', 'W', 'Y', 'V', 'U', 'X']
+    NUM_AA = len(ALL_AA)  # number of amino acids (21 + 1 unknown)
     
     def __init__(self, hla_allele, root=None, encoding='default', max_aa_len=14, padding='end', test_set='c004', input_format='linear', toy=False):
         '''
@@ -149,7 +149,7 @@ class PeptideDataset:
         encoded_seq: ndarray
             String of binaries encoding each amino acid (N x 1)
         bits: int
-            Number of bits used to encode each amino acid (default: NUM_AA=20) 
+            Number of bits used to encode each amino acid (default: NUM_AA=22) 
         '''
         
         seq = _seq.upper()  # make amino acid sequence all CAPS

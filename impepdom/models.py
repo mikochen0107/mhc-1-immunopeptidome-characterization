@@ -5,14 +5,14 @@ import torch.nn.functional as F
 import torch.optim as optim
 
 class MultilayerPerceptron(nn.Module):
-    def __init__(self, input_size=294, num_hidden_layers=2, hidden_layer_size=20):
+    def __init__(self, input_size=308, num_hidden_layers=2, hidden_layer_size=100):
         '''
         Initialize an `num_hidden_layers + 2` neural network.
 
         Parameters
         ----------
         input_size: int
-            Length of input vector
+            Length of input vector, should be NUM_AA * max_aa_len
         
         num_hidden_layers: int
             Number of equivalent hidden layers
