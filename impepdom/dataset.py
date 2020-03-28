@@ -1,6 +1,7 @@
 import os
 from collections import Counter
 import random
+import time
 
 import torch
 import numpy as np
@@ -43,6 +44,8 @@ class PeptideDataset:
             Initialize only a small subset of peptides dataset
         '''
         
+        since = time.time()
+
         self.hla_allele = hla_allele
         self.root = self.ROOT if root == None else root
         self.encoding = encoding
@@ -53,6 +56,7 @@ class PeptideDataset:
         self.toy = toy
         
         self.data, self.targets, self.raw_data = self.parse_csv()
+        print('peptide dataset initialized in {:.4f} s'.format(time.time() - since))
 
     ### (begin) Neural network training related methods ###
 

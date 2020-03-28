@@ -17,6 +17,8 @@ import impepdom
 from impepdom import store_manager
 
 
+STORE_PATH = os.path.join(os.getcwd(), '../store')  # migrate all save function to store_manager
+
 def hyperparam_grid_search(
     model, dataset, _eval='auc', fold_idx=[0, 1, 2, 3],
     batch_sizes=[32, 64, 128], epochs=[15], learning_rates=[5e-4, 1e-3, 5e-3],
@@ -66,12 +68,13 @@ def hyperparam_grid_search(
                 experiment_count += 1
                 print('running experiment {} out of {} at {:.4f} s'.format(experiment_count, tot_experiments, time.time() - since))
                 cross_eval = []  # store `eval` score of each validation folds
+                which_model = None
 
                 for val_fold_id in fold_idx:
                     train_fold_idx = copy.copy(fold_idx)
                     train_fold_idx.remove(val_fold_id)  # remove validation fold
 
-                    save_folder, _ = run_experiment(
+                    folder, _ = run_experiment(
                         model,
                         dataset,
                         train_fold_idx=train_fold_idx,
@@ -80,15 +83,17 @@ def hyperparam_grid_search(
                         num_epochs=num_epochs,
                         batch_size=batch_size,
                         scheduler=scheduler,
-                        show_output=False
+                        show_output=False,
+                        which_model=which_model
                     )
 
-                    _, train_history = impepdom.load_trained_model(model, save_folder)
-                    cross_eval.append(np.mean(train_history['val'][_eval][-end_eval:-1]))  # get the last epochs for more representative score
-                    print('done')
+                    _, train_history = impepdom.load_trained_model(model, folder)
+                    end_eval = min(end_eval, len(train_history['val'][_eval]))
+                    cross_eval.append(np.mean(train_history['val'][_eval][-end_eval:]))  # get the last epochs for more representative score
+                    which_model = store_manager.extract_date(folder)  # to keep in the same folder
                 
                 results_store.append({
-                    'save_folder': save_folder,
+                    'model': folder,
                     'mean_' + _eval: np.mean(cross_eval),
                     'min_' + _eval: np.min(cross_eval),
                     'max_' + _eval: np.max(cross_eval),
@@ -110,7 +115,8 @@ def hyperparam_grid_search(
 def run_experiment(
     model, dataset, train_fold_idx, val_fold_idx=None,
     criterion=None, optimizer=None, scheduler=None,
-    batch_size=64, num_epochs=25, learning_rate=1e-3, show_output=True
+    batch_size=64, num_epochs=25, learning_rate=1e-3, show_output=True,
+    which_model=None
 ):
     '''
     Run a neural network training on specified train and validation set, with parameters.
@@ -138,10 +144,13 @@ def run_experiment(
     show_output: bool
         Show output of training process (everything will be saved anyway)
 
+    which_model: string
+        Attach results to the same model if we're just doing cross-validation
+
     Returns
     ----------
-    save_folder: string
-        Relative path where the cache is located
+    folder: string
+        Path inside STORE_PATH to folder storing training cache
     '''
     
     need_validation = False if val_fold_idx is None else True
@@ -182,20 +191,20 @@ def run_experiment(
     )
 
     # save model
-    save_folder = store_manager.get_save_path(model, dataset.get_allele(), train_fold_idx)
-    torch.save(model.state_dict(), os.path.join(save_folder, 'torch_model'))
+    folder = store_manager.get_save_path(model, dataset.get_allele(), train_fold_idx)
+    torch.save(model.state_dict(), os.path.join(STORE_PATH, folder, 'torch_model'))
     
     # save training history
-    store_manager.pickle_dump(train_history, save_folder, 'train_history')
+    store_manager.pickle_dump(train_history, folder, 'train_history')
 
     # save validation predictions
     if need_validation:
         val = {}
         data, val['target'] = dataset.get_fold(val_fold_idx)
         val['pred'] = model(torch.tensor(data).float())
-        store_manager.pickle_dump(val, save_folder, 'validation_' + store_manager.list_to_str(val_fold_idx))
+        store_manager.pickle_dump(val, folder, 'validation_' + store_manager.list_to_str(val_fold_idx))
 
-    return save_folder, baseline_metrics
+    return folder, baseline_metrics
 
 def plot_train_history(train_history, baseline_metrics=None, metrics=['loss', 'acc', 'auc']):
     '''

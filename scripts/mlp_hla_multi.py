@@ -9,15 +9,21 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import roc_auc_score, precision_score
 import torch
 import impepdom
-from impepdom import models
 
 
-model = models.MultilayerPerceptron(num_hidden_layers=2, hidden_layer_size=100)
+model = impepdom.models.MultilayerPerceptron(num_hidden_layers=2, hidden_layer_size=100)
 dataset = impepdom.PeptideDataset(
     hla_allele='HLA-A01:01',
     padding='flurry',
     toy=False)
     
-results = impepdom.hyperparam_grid_search(model, dataset)
+results = impepdom.hyperparam_grid_search(
+    model,
+    dataset,
+    epochs=[1],
+    batch_sizes=[32],
+    learning_rates=[5e-3],
+)
+
 for res in results:
     print(res)

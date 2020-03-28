@@ -53,4 +53,5 @@ class MultilayerPerceptron(nn.Module):
         return x
 
     def get_my_name(self):
-        return "mlp"
+        name = "mlp_{0}x{1}".format(self.num_hid, self.hid_sz) 
+        return name
