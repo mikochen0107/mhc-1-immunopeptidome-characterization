@@ -120,9 +120,10 @@ def update_hyperparams_store(results_store):
     if not os.path.exists(hyperparams_path):
         new_hyperparam_df.to_csv(hyperparams_path)
     else:
-        hyperparam_df = pd.read_csv(hyperparams_path)
-        hyperparam_df = pd.concat([new_hyperparam_df], ignore_index=True)
-        new_hyperparam_df.to_csv(hyperparams_path)
+        hyperparam_df = pd.read_csv(hyperparams_path, index_col=0)
+        hyperparam_df = pd.concat([hyperparam_df, new_hyperparam_df], ignore_index=True)
+        hyperparam_df.sort_values(by=['mean_auc', 'min_auc'], inplace=True, ascending=[False, False], ignore_index=True)
+        hyperparam_df.to_csv(hyperparams_path)
 
 def fetch_best_hyperparams(model_name, _eval):
     '''
@@ -191,6 +192,7 @@ def get_hyperparams_store_template():
 
     hyperparams = {
         'model': [],
+        'padding': [],
         'batch_size': [],
         'num_epochs': [],
         'learning_rate': [],

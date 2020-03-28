@@ -61,6 +61,7 @@ def hyperparam_grid_search(
     results_store = []  # to store model names and scores
     tot_experiments = len(batch_sizes) * len(epochs) * len(learning_rates)
     experiment_count = 0
+    padding = dataset.padding
 
     for batch_size in batch_sizes:
         for num_epochs in epochs:
@@ -94,6 +95,7 @@ def hyperparam_grid_search(
                 
                 results_store.append({
                     'model': folder[:folder.find('/')],
+                    'padding': padding,
                     'mean_' + _eval: np.mean(cross_eval),
                     'min_' + _eval: np.min(cross_eval),
                     'max_' + _eval: np.max(cross_eval),
