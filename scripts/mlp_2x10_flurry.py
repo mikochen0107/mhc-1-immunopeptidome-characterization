@@ -9,7 +9,7 @@ hla_alleles = [
     'HLA-B44:03',  # >>> Khoi 1
     'HLA-B08:01',
     'HLA-A01:01',
-    'HLA-B15:01',  # >>> Khoi 1
+    'HLA-B15:01',  # <<< Khoi 1
     'HLA-A02:01',  # >>> Khoi 2
     'HLA-A03:01',  
     'HLA-B07:02',  # <<< Khoi 2
