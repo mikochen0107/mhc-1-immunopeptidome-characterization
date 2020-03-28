@@ -34,9 +34,9 @@ for i, hla_allele in enumerate(hla_alleles_michael):  # change allele list here
     results = impepdom.hyperparam_grid_search(
         model,
         dataset,
-        epochs=[1] # [5, 10, 15],
-        batch_sizes=[32]  # [32, 64, 128],
-        learning_rates=[5e-3] # [5e-4, 1e-3, 5e-3, 1e-2, 5e-2],
+        epochs=[1], # [5, 10, 15],
+        batch_sizes=[32],  # [32, 64, 128],
+        learning_rates=[5e-3],  # [5e-4, 1e-3, 5e-3, 1e-2, 5e-2],
     )
 
     for res in results:
