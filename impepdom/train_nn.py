@@ -7,6 +7,7 @@ import torch.nn as nn
 import numpy as np
 
 from sklearn.metrics import roc_auc_score
+import impepdom.eval
 
 def train_nn(model, peploader, criterion, optimizer, scheduler=None, num_epochs=25, learning_rate=1e-2, validation=True, show_output=True):
     '''
@@ -85,13 +86,27 @@ def train_nn(model, peploader, criterion, optimizer, scheduler=None, num_epochs=
             y_pred = np.vstack(y_pred)
             y_proba = np.vstack(y_proba)
 
+            # calculate metrics for the model at current epoch
             epoch_loss = running_loss / count
             epoch_acc = np.sum(y_actual == y_pred) / count
-            epoch_auc = roc_auc_score(y_actual, y_proba)  # use y score to evaluate roc auc
+            epoch_f1 = impepdom.eval.ppv(y_actual, y_proba) 
 
+            epoch_auc = roc_auc_score(y_actual, y_proba)
+            epoch_auc_01 = impepdom.eval.auc_01(y_actual, y_proba)
+
+            epoch_ppv = impepdom.eval.ppv(y_actual, y_proba) 
+            epoch_ppv_100 = impepdom.eval.ppv_100(y_actual, y_proba)
+
+            # save calculated metrics to the training history
             train_history[phase]['loss'].append(epoch_loss)
             train_history[phase]['acc'].append(epoch_acc)
+            train_history[phase]['f1'].append(epoch_f1)
+
             train_history[phase]['auc'].append(epoch_auc)
+            train_history[phase]['auc_01'].append(epoch_auc_01)
+
+            train_history[phase]['ppv'].append(epoch_ppv)
+            train_history[phase]['ppv_100'].append(epoch_ppv_100)
             
             if show_output:
                 print('{} loss: {:.4f} accuracy: {:.4f} auc: {:.4f}'.format(
@@ -126,7 +141,7 @@ def init_train_hist():
         Dictionary to contain training (and validation) metric logs over epochs
     '''
 
-    metrics = ['loss', 'acc', 'auc', 'auc0.1', 'pcc']
+    metrics = ['loss', 'acc', 'f1', 'auc', 'auc_01', 'ppv', 'ppv_100']
     train_history = {
         'train': {},
         'val': {}

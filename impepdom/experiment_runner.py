@@ -20,9 +20,9 @@ from impepdom import store_manager
 STORE_PATH = os.path.join(os.getcwd(), '../store')  # migrate all save function to store_manager
 
 def hyperparam_grid_search(
-    model, dataset, _eval='auc', fold_idx=[0, 1, 2, 3],
-    batch_sizes=[32, 64, 128], epochs=[15], learning_rates=[5e-4, 1e-3, 5e-3],
-    optimizer=None, scheduler=None, end_eval=3, sort_by='mean'
+    model, dataset, fold_idx=[0, 1, 2, 3],
+    max_epochs=15, batch_sizes=[32, 64, 128], learning_rates=[5e-4, 1e-3, 5e-3],
+    optimizer=None, scheduler=None, sort_by='mean'
 ):
     '''
     Parameters
@@ -33,20 +33,17 @@ def hyperparam_grid_search(
     dataset: impepdom.PeptideDataset
         Initialized peptide dataset for MHC I
 
-    _eval: string
-        Evaluation metric. Options: 'acc', 'auc', 'auc_01', 'ppv'
-
     fold_idx: list
         List of number (from 0 to 4) to specify k-folds for cross-validation
 
+    max_epochs: int, optional
+        Epoch at which to stop training. Results of all intermediary epochs will be saved
+
     batch_sizes: list, optional
-    epochs: list, optional
+
     learning_rates: list, optional
     criterion: nn.Loss, optional  # in the works
     scheduler: torch.optim.lr_scheduler, optional  # in the works
-
-    end_eval: int, optional
-        How many values to take from the end of training (to avoid lucky results)
 
     sort_by: string, optional
         Sort results to present. Options: 'mean', 'min', 'max'
@@ -59,50 +56,59 @@ def hyperparam_grid_search(
     
     since = time.time()
     results_store = []  # to store model names and scores
-    tot_experiments = len(batch_sizes) * len(epochs) * len(learning_rates)
+    tot_experiments = len(batch_sizes) * len(learning_rates)
     experiment_count = 0
     padding = dataset.padding
 
     for batch_size in batch_sizes:
-        for num_epochs in epochs:
-            for learning_rate in learning_rates:
-                experiment_count += 1
-                print('running experiment {} out of {} at {:.4f} s'.format(experiment_count, tot_experiments, time.time() - since))
-                cross_eval = []  # store `eval` score of each validation folds
-                which_model = None
+        for learning_rate in learning_rates:
+            experiment_count += 1
+            print('running experiment {} out of {} at {:.4f} s'.format(experiment_count, tot_experiments, time.time() - since))
+            metrics = store_manager.METRICS
+            desc_stats = store_manager.DESC_STATS
+            
+            cross_eval = {}  # store history of validation metrics. Per metric: columns are epochs, rows are results on folds
+            for metric in metrics:
+                cross_eval[metric] = []
+            
+            which_model = None
+            for val_fold_id in fold_idx:
+                train_fold_idx = copy.copy(fold_idx)
+                train_fold_idx.remove(val_fold_id)  # remove validation fold
 
-                for val_fold_id in fold_idx:
-                    train_fold_idx = copy.copy(fold_idx)
-                    train_fold_idx.remove(val_fold_id)  # remove validation fold
+                folder, _ = run_experiment(
+                    model,
+                    dataset,
+                    train_fold_idx=train_fold_idx,
+                    val_fold_idx=[val_fold_id],
+                    learning_rate=learning_rate,
+                    num_epochs=max_epochs,
+                    batch_size=batch_size,
+                    scheduler=scheduler,
+                    show_output=False,
+                    which_model=which_model
+                )
 
-                    folder, _ = run_experiment(
-                        model,
-                        dataset,
-                        train_fold_idx=train_fold_idx,
-                        val_fold_idx=[val_fold_id],
-                        learning_rate=learning_rate,
-                        num_epochs=num_epochs,
-                        batch_size=batch_size,
-                        scheduler=scheduler,
-                        show_output=False,
-                        which_model=which_model
-                    )
-
-                    _, train_history = impepdom.load_trained_model(model, folder)
-                    end_eval = min(end_eval, len(train_history['val'][_eval]))
-                    cross_eval.append(np.mean(train_history['val'][_eval][-end_eval:]))  # get the last epochs for more representative score
-                    which_model = store_manager.extract_which_model(folder)  # to keep in the same folder
-                
-                results_store.append({
+                _, train_history = impepdom.load_trained_model(model, folder)            
+                for metric in metrics:
+                    cross_eval[metric].append(train_history['val'][metric])  # get the last epochs for more representative score
+                which_model = store_manager.extract_which_model(folder)  # to keep in the same folder
+            
+            cross_eval = np.vstack(cross_eval)  # make into one numpy array
+            for epoch in range(len(cross_eval[0])):
+                res_obj = {
                     'model': folder[:folder.find('/')],
                     'padding': padding,
-                    'mean_' + _eval: np.mean(cross_eval),
-                    'min_' + _eval: np.min(cross_eval),
-                    'max_' + _eval: np.max(cross_eval),
                     'batch_size': batch_size,
-                    'num_epochs': num_epochs,
+                    'num_epochs': epoch,
                     'learning_rate': learning_rate,
-                })
+                }
+
+                for metric in metrics:
+                    for desc_stat in desc_stats:
+                        res_obj[desc_stat[0] + '_' + metric] = desc_stat[1](cross_eval[:, epoch])
+
+                results_store.append(res_obj)
 
     results_store.sort(key=(lambda model: model[sort_by + '_' + _eval]))
     store_manager.update_hyperparams_store(results_store)

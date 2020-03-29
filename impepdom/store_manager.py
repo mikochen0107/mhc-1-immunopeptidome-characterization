@@ -2,11 +2,14 @@ import os
 import pickle
 from datetime import datetime
 
+import numpy as np
 import pandas as pd
 import torch
 
 
 STORE_PATH = os.path.join(os.getcwd(), '../store')
+METRICS = ['acc', 'f1', 'auc', 'auc_01', 'ppv', 'ppv_100']
+DESC_STATS = [('mean', np.mean), ('min'. np.min), ('max', np.max)]
 
 def get_save_path(model, hla_allele, train_fold_idx, which_model):
     '''
@@ -187,8 +190,8 @@ def get_hyperparams_store_template():
         Dictionary of model hyperparameters configuration and results.
     '''
 
-    metrics = ['acc', 'auc', 'auc_01', 'ppv']
-    desc_stats = ['mean', 'min', 'max']
+    metrics = METRICS
+    desc_stats = DESC_STATS
 
     hyperparams = {
         'model': [],
@@ -203,6 +206,6 @@ def get_hyperparams_store_template():
     # initilize space for metrics
     for metric in metrics:
         for desc_stat in desc_stats:
-            hyperparams[desc_stat + '_' + metric] = []
+            hyperparams[desc_stat[0] + '_' + metric] = []
 
     return hyperparams
