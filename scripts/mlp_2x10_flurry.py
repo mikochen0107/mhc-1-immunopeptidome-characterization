@@ -21,7 +21,7 @@ hla_alleles = [
 hla_alleles_khoi_1 = hla_alleles[:4]
 hla_alleles_khoi_2 = hla_alleles[4:7]
 hla_alleles_michael = hla_alleles[7:]
-hla_alleles_test = ['HLA-B15:01']
+hla_alleles_test = ['HLA-A01:01']
 
 model = impepdom.models.MultilayerPerceptron(num_hidden_layers=2, hidden_layer_size=100)
 

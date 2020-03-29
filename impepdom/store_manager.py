@@ -6,6 +6,8 @@ import numpy as np
 import pandas as pd
 import torch
 
+import impepdom.metrics
+
 
 STORE_PATH = os.path.join(os.getcwd(), '../store')
 
@@ -188,8 +190,8 @@ def get_hyperparams_store_template():
         Dictionary of model hyperparameters configuration and results.
     '''
 
-    metrics = METRICS
-    desc_stats = DESC_STATS
+    metrics = impepdom.metrics.METRICS
+    desc_stats = impepdom.metrics.DESC_STATS
 
     hyperparams = {
         'model': [],
