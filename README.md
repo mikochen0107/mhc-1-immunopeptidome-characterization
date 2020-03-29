@@ -1,6 +1,7 @@
-# Peptide ligand classification with multilayer perceptrons
-## Description
-To be added...
+# Impepdom: Peptide Ligand Classificator
+<hr />
+
+Description to be added...
 
 ## Installation
 #### Step 1: System pre-requisites
@@ -57,5 +58,5 @@ $ python <NAME_OF_SCRIPT>
 ### Scenario 2: Hyperparameter tuning
 To be added...
 
-## Formats
+## Data formats
 To be added...
