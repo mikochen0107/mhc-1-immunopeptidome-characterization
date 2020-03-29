@@ -89,13 +89,13 @@ def train_nn(model, peploader, criterion, optimizer, scheduler=None, num_epochs=
             # calculate metrics for the model at current epoch
             epoch_loss = running_loss / count
             epoch_acc = np.sum(y_actual == y_pred) / count
-            epoch_f1 = impepdom.eval.ppv(y_actual, y_pred) 
+            epoch_f1 = impepdom.metrics.ppv(y_actual, y_pred) 
 
             epoch_auc = roc_auc_score(y_actual, y_proba)
-            epoch_auc_01 = impepdom.eval.auc_01(y_actual, y_proba)
+            epoch_auc_01 = impepdom.metrics.auc_01(y_actual, y_proba)
 
-            epoch_ppv = impepdom.eval.ppv(y_actual, y_proba) 
-            epoch_ppv_100 = impepdom.eval.ppv_100(y_actual, y_proba)
+            epoch_ppv = impepdom.metrics.ppv(y_actual, y_proba) 
+            epoch_ppv_100 = impepdom.metrics.ppv_100(y_actual, y_proba)
 
             # save calculated metrics to the training history
             train_history[phase]['loss'].append(epoch_loss)

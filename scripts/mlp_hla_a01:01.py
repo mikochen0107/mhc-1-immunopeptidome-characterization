@@ -17,7 +17,7 @@ dataset = impepdom.PeptideDataset(
     padding='flurry',
     toy=True)
 
-folder, baseline_metrics = impepdom.run_experiment(
+folder, baseline_metrics, _ = impepdom.run_experiment(
     model,
     dataset,
     train_fold_idx=[1, 2, 3],

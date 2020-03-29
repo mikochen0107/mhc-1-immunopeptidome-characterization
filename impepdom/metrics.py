@@ -1,6 +1,10 @@
 from sklearn.metrics import roc_auc_score, accuracy_score, f1_score
 import numpy as np
 
+
+METRICS = ['acc', 'f1', 'auc', 'auc_01', 'ppv', 'ppv_100']
+DESC_STATS = [('mean', np.mean), ('min', np.min), ('max', np.max)]
+
 def auc(y_true, y_proba):
 	return roc_auc_score(y_true, y_proba)
 
@@ -30,7 +34,7 @@ def ppv_100(y_true, y_proba):
 	if num_of_1s < 100:
 		return ppv(y_true, y_proba)
 	sorted_y_true = np.flip([x for _, x in sorted(zip(y_proba, y_true))])
-	ppv_100_score = np.sum(sorted_y_true[100:] == 1) / 100
+	ppv_100_score = np.sum(sorted_y_true[:100] == 1) / 100  # percentage of positives in top-rated peptides
 
 	return ppv_100_score
 

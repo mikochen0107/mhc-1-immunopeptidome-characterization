@@ -8,8 +8,6 @@ import torch
 
 
 STORE_PATH = os.path.join(os.getcwd(), '../store')
-METRICS = ['acc', 'f1', 'auc', 'auc_01', 'ppv', 'ppv_100']
-DESC_STATS = [('mean', np.mean), ('min'. np.min), ('max', np.max)]
 
 def get_save_path(model, hla_allele, train_fold_idx, which_model):
     '''
