@@ -1,17 +1,39 @@
-from sklearn.metrics import precision_score, roc_auc_score
+from sklearn.metrics import roc_auc_score, accuracy_score, f1_score
 import numpy as np
 
-def eval(y_true, y_pred):
+def auc(y_true, y_proba):
+	return roc_auc_score(y_true, y_proba)
 
+def auc_01(y_true, y_proba):
+	return roc_auc_score(y_true, y_proba, max_fpr=0.1)
 
+def ppv(y_true, y_proba):
+	'''
+	PPV is calculated by sorting the y_true based on y_proba (the prediction scores), and calculating
+	the true positive rate in the first n elements in the sorted y_true array, where n refers to the 
+	number of positives in y_true. 
+	'''
+	num_of_1s = np.sum(y_true == 1)
+	sorted_y_true = [x for _,x in sorted(zip(y_pred, y_true))]
+	ppv_score = np.sum(sorted_y_true[-num_of_1s:] == 1)/num_of_1s
 
-	AUC = roc_auc_score(y_true, y_pred)
+	return ppv_score
 
-	AUC_01 = roc_auc_score(y_true, y_pred, max_fpr=0.1)
+def ppv_100(y_true, y_proba):
+	'''
+	Function that calculates the ppv score for the top 100 predictions (instead of number of positives). 
+	If the number of positives is smaller than 100, then the function defaults to the normal ppv function.
+	'''
+	num_of_1s = np.sum(y_true == 1)
+	if num_of_1s < 100:
+		return ppv(y_true, y_pred)
+	sorted_y_true = [x for _,x in sorted(zip(y_pred, y_true))]
+	ppv_100_score = np.sum(sorted_y_true[-100:] == 1)/100
 
-	top_100_idx = np.argsort(y_pred)[-100:]
-	y_true_100 = [y_true[i] for i in top_100_idx]
-	y_pred_100 = [y_pred[i] for i in top_100_idx]
-	PPV_100 = precision_score(y_true_100, y_pred_100)
+	return ppv_100_score
 
-    return AUC, AUC_01, PPV_100
+def acc(y_true, y_pred):
+	return accuracy_score(y_true, y_pred)
+
+def f1(y_true, y_pred):
+	return f1_score(y_true, y_pred) 
