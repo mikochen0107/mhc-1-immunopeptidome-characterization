@@ -24,7 +24,7 @@ folder, baseline_metrics, _ = impepdom.run_experiment(
     val_fold_idx=[0],
     learning_rate=2e-3,
     num_epochs=5,
-    batch_size=128)
+    batch_size=32)
 
 trained_model, train_history = impepdom.load_trained_model(model, folder)
 impepdom.plot_train_history(train_history, baseline_metrics)

@@ -23,16 +23,17 @@ hla_alleles_khoi_2 = hla_alleles[5:7]
 hla_alleles_michael = hla_alleles[7:]
 hla_alleles_test = ['HLA-A01:01']
 
+impepdom.time_tracker.reset_timer()  # start counting time
 model = impepdom.models.MultilayerPerceptron(num_hidden_layers=2, hidden_layer_size=100)
 
 for i, hla_allele in enumerate(hla_alleles_michael):  # change allele list here
-    print('working with allele {0} out of {1}'.format(i + 1, len(hla_alleles_michael)))  # change allele list here
+    print(impepdom.time_tracker.now() + 'working with allele {0} out of {1}'.format(i + 1, len(hla_alleles_michael)))  # change allele list here
     dataset = impepdom.PeptideDataset(
         hla_allele=hla_allele,  
         padding='flurry',
         toy=False)
         
-    results = impepdom.hyperparam_grid_search(
+    best_config = impepdom.hyperparam_grid_search(
         model,
         dataset,
         max_epochs=15,
@@ -40,5 +41,4 @@ for i, hla_allele in enumerate(hla_alleles_michael):  # change allele list here
         learning_rates=[5e-4, 1e-3, 5e-3, 1e-2, 5e-2, 1e-1],
     )
 
-    for res in results:
-        print(res)
+    print(best_config)

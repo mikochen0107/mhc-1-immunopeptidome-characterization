@@ -7,7 +7,6 @@ import time
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.optim import lr_scheduler
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -47,21 +46,24 @@ def hyperparam_grid_search(
         Sort results to present, desc_stat + metric. Examples: 'mean_acc', 'min_auc_01', 'max_ppv'
 
     Returns
-    ---------- 
-    results_store: list
-        List of model results
+    ----------
+    best_config: dict
+        Dictionary of hyperparameters that showed the best performance based on eval
     '''
     
     since = time.time()
-    results_store = []  # to store model names and scores
     tot_experiments = len(batch_sizes) * len(learning_rates)
     experiment_count = 0
+
     padding = dataset.padding
+    best_config = None
 
     for batch_size in batch_sizes:
         for learning_rate in learning_rates:
+            print(impepdom.time_tracker.now() + 'running experiment {} out of {}'.format(experiment_count + 1, tot_experiments))
             experiment_count += 1
-            print('running experiment {} out of {} at {:.4f} s'.format(experiment_count, tot_experiments, time.time() - since))
+            results_store = []  # to store model names and scores
+
             metrics = impepdom.metrics.METRICS
             desc_stats = impepdom.metrics.DESC_STATS
             
@@ -110,16 +112,18 @@ def hyperparam_grid_search(
 
                 results_store.append(res_obj)
 
-    results_store.sort(key=(lambda model_res: model_res[sort_by]))
-    impepdom.store_manager.update_hyperparams_store(results_store)
+            results_store.sort(key=(lambda model_res: model_res[sort_by]), reverse=True)
+            impepdom.store_manager.update_hyperparams_store(results_store)
+
+            if best_config == None or best_config[sort_by] < results_store[0][sort_by]:
+                best_config = results_store[0]
+            print(impepdom.time_tracker.now() + 'experiment {} results saved'.format(experiment_count))
 
     time_elapsed = time.time() - since
-    print('evaluation completed in {:.0f} m {:.4f} s'.format(
+    print(impepdom.time_tracker.now() + 'evaluation completed!'.format(
             time_elapsed // 60, time_elapsed % 60))
-    print('best model for {0} is {1}'.format(sort_by, results_store[-1]))
 
-    return results_store
-
+    return best_config
 
 def run_experiment(
     model, dataset, train_fold_idx, val_fold_idx=None,

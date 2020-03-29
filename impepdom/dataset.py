@@ -8,6 +8,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import torch
 
+import impepdom.time_tracker
+
+
 class PeptideDataset:
     ROOT = '../datasets/MHC_I_el_allele_specific'.format(__file__)  # root directory containing peptide binding data
     ALL_AA = ['A', 'R', 'N', 'D', 'C', 'E', 'Q', 'G', 'H', 'I', 'L', 'K', 'M', 'F', 'P', 'S', 'T', 'W', 'Y', 'V', 'U', 'X']
@@ -56,7 +59,7 @@ class PeptideDataset:
         self.toy = toy
         
         self.data, self.targets, self.raw_data = self.parse_csv()
-        print('peptide dataset initialized in {:.4f} s'.format(time.time() - since))
+        print(impepdom.time_tracker.now() + 'peptide dataset initialized')
 
     ### (begin) Neural network training related methods ###
 
