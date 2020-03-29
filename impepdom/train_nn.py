@@ -6,7 +6,6 @@ import torch
 import torch.nn as nn
 import numpy as np
 
-from sklearn.metrics import roc_auc_score
 import impepdom.metrics
 
 def train_nn(model, peploader, criterion, optimizer, scheduler=None, num_epochs=25, learning_rate=1e-2, validation=True, show_output=True):
@@ -88,10 +87,10 @@ def train_nn(model, peploader, criterion, optimizer, scheduler=None, num_epochs=
 
             # calculate metrics for the model at current epoch
             epoch_loss = running_loss / count
-            epoch_acc = np.sum(y_actual == y_pred) / count
-            epoch_f1 = impepdom.metrics.ppv(y_actual, y_pred) 
+            epoch_acc = impepdom.metrics.acc(y_actual, y_pred)
+            epoch_f1 = impepdom.metrics.f1(y_actual, y_pred) 
 
-            epoch_auc = roc_auc_score(y_actual, y_proba)
+            epoch_auc = impepdom.metrics.auc(y_actual, y_proba)
             epoch_auc_01 = impepdom.metrics.auc_01(y_actual, y_proba)
 
             epoch_ppv = impepdom.metrics.ppv(y_actual, y_proba) 

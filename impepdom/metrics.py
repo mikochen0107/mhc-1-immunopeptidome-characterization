@@ -20,7 +20,7 @@ def ppv(y_true, y_proba):
 
 	num_of_1s = np.sum(y_true == 1)
 	sorted_y_true = np.flip([x for _, x in sorted(zip(y_proba, y_true))])
-	ppv_score = np.sum(sorted_y_true[num_of_1s:] == 1) / num_of_1s
+	ppv_score = np.sum(sorted_y_true[:num_of_1s] == 1) / num_of_1s
 
 	return ppv_score
 
