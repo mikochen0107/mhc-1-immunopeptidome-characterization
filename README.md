@@ -1,4 +1,4 @@
-# Impepdom: Neural Network Builder for Peptide Ligand Classification
+# Impepdom: Neural network builder for peptide ligand classification
 <hr />
 
 Description to be added...
