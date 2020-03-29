@@ -4,4 +4,5 @@ store/*
 .DS_Store
 .ipynb_checkpoints
 .vscode
-__pycache__
+_pycache_
+impepdom/__pycache__
