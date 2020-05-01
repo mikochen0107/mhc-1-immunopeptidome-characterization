@@ -1,4 +1,5 @@
 from sklearn.metrics import roc_auc_score, accuracy_score, f1_score
+from scipy.stats import pearsonr
 import numpy as np
 
 
@@ -23,6 +24,18 @@ def ppv(y_true, y_proba):
 	ppv_score = np.sum(sorted_y_true[:num_of_1s] == 1) / num_of_1s
 
 	return ppv_score
+
+
+def pcc(y_true, y_proba):
+	'''
+	PCC is the Pearson correlation coefficient. The correlation is calculated between the true labels (y_true) and the predicted probabilities (y_proba).
+	The function from scipy is used, where the first returned value is the coefficient and the second value is the p-value. We only want the first one.
+	'''
+
+	pcc_score = pearsonr(y_true, y_proba)[0] 
+
+	return pcc_score
+
 
 def ppv_100(y_true, y_proba):
 	'''
