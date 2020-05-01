@@ -1,16 +1,20 @@
 import os
 from collections import Counter
 import random
+import time
 
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
 
+import impepdom.time_tracker
+
+
 class PeptideDataset:
     ROOT = '../datasets/MHC_I_el_allele_specific'.format(__file__)  # root directory containing peptide binding data
-    ALL_AA = ['A', 'R', 'N', 'D', 'C', 'E', 'Q', 'G', 'H', 'I', 'L', 'K', 'M', 'F', 'P', 'S', 'T', 'W', 'Y', 'V', 'U']
-    NUM_AA = len(ALL_AA)  # number of amino acids (21)
+    ALL_AA = ['A', 'R', 'N', 'D', 'C', 'E', 'Q', 'G', 'H', 'I', 'L', 'K', 'M', 'F', 'P', 'S', 'T', 'W', 'Y', 'V', 'U', 'X']
+    NUM_AA = len(ALL_AA)  # number of amino acids (21 + 1 unknown)
     
     def __init__(self, hla_allele, root=None, encoding='default', max_aa_len=14, padding='end', test_set='c004', input_format='linear', toy=False):
         '''
@@ -43,6 +47,8 @@ class PeptideDataset:
             Initialize only a small subset of peptides dataset
         '''
         
+        since = time.time()
+
         self.hla_allele = hla_allele
         self.root = self.ROOT if root == None else root
         self.encoding = encoding
@@ -53,6 +59,7 @@ class PeptideDataset:
         self.toy = toy
         
         self.data, self.targets, self.raw_data = self.parse_csv()
+        print(impepdom.time_tracker.now() + 'peptide dataset initialized')
 
     ### (begin) Neural network training related methods ###
 
@@ -145,7 +152,7 @@ class PeptideDataset:
         encoded_seq: ndarray
             String of binaries encoding each amino acid (N x 1)
         bits: int
-            Number of bits used to encode each amino acid (default: NUM_AA=20) 
+            Number of bits used to encode each amino acid (default: NUM_AA=22) 
         '''
         
         seq = _seq.upper()  # make amino acid sequence all CAPS

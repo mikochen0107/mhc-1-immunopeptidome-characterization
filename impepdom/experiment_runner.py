@@ -1,22 +1,135 @@
 import os
 import pickle
+from itertools import permutations
+import copy
+import time
 
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.optim import lr_scheduler
+
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.metrics import roc_auc_score
 
 import impepdom
-from impepdom import store_manager
+
+
+def hyperparam_grid_search(
+    model, dataset, fold_idx=[0, 1, 2, 3],
+    max_epochs=15, batch_sizes=[32, 64, 128], learning_rates=[5e-4, 1e-3, 5e-3],
+    optimizer=None, scheduler=None, sort_by='mean_auc_01'
+):
+    '''
+    Parameters
+    ----------
+    model: nn.Module
+        Defined neural network
+
+    dataset: impepdom.PeptideDataset
+        Initialized peptide dataset for MHC I
+
+    fold_idx: list
+        List of number (from 0 to 4) to specify k-folds for cross-validation
+
+    max_epochs: int, optional
+        Epoch at which to stop training. Results of all intermediary epochs will be saved
+
+    batch_sizes: list, optional
+
+    learning_rates: list, optional
+    criterion: nn.Loss, optional  # in the works
+    scheduler: torch.optim.lr_scheduler, optional  # in the works
+
+    sort_by: string, optional
+        Sort results to present, desc_stat + metric. Examples: 'mean_acc', 'min_auc_01', 'max_ppv'
+
+    Returns
+    ----------
+    best_config: dict
+        Dictionary of hyperparameters that showed the best performance based on eval
+    '''
+    
+    since = time.time()
+    tot_experiments = len(batch_sizes) * len(learning_rates)
+    experiment_count = 0
+
+    padding = dataset.padding
+    best_config = None
+
+    for batch_size in batch_sizes:
+        for learning_rate in learning_rates:
+            print(impepdom.time_tracker.now() + 'running experiment {} out of {}'.format(experiment_count + 1, tot_experiments))
+            experiment_count += 1
+            results_store = []  # to store model names and scores
+
+            metrics = impepdom.metrics.METRICS
+            desc_stats = impepdom.metrics.DESC_STATS
+            
+            cross_eval = {}  # store history of validation metrics. Per metric: columns are epochs, rows are results on folds
+            for metric in metrics:
+                cross_eval[metric] = []
+            
+            which_model = None
+            for val_fold_id in fold_idx:
+                train_fold_idx = copy.copy(fold_idx)
+                train_fold_idx.remove(val_fold_id)  # remove validation fold
+
+                folder, _, config = run_experiment(
+                    model,
+                    dataset,
+                    train_fold_idx=train_fold_idx,
+                    val_fold_idx=[val_fold_id],
+                    learning_rate=learning_rate,
+                    num_epochs=max_epochs,
+                    batch_size=batch_size,
+                    scheduler=scheduler,
+                    show_output=False,
+                    which_model=which_model
+                )
+
+                _, train_history = impepdom.load_trained_model(model, folder)            
+                for metric in metrics:
+                    cross_eval[metric].append(train_history['val'][metric])  # get metric over epochs
+                which_model = impepdom.store_manager.extract_which_model(folder)  # to keep in the same folder
+            
+            for epoch in range(max_epochs):
+                res_obj = {
+                    'model': folder[:folder.find('/')],
+                    'padding': padding,
+                    'batch_size': batch_size,
+                    'num_epochs': epoch + 1,
+                    'learning_rate': learning_rate,
+                    'optimizer': config['optimizer'],
+                    'scheduler': config['scheduler']
+                }
+
+                for metric in metrics:
+                    cross_eval_metric = np.vstack(cross_eval[metric])  # make into one numpy array
+                    for desc_stat in desc_stats:
+                        res_obj[desc_stat[0] + '_' + metric] = desc_stat[1](cross_eval_metric[:, epoch])
+
+                results_store.append(res_obj)
+
+            results_store.sort(key=(lambda model_res: model_res[sort_by]), reverse=True)
+            impepdom.store_manager.update_hyperparams_store(results_store)
+
+            if best_config == None or best_config[sort_by] < results_store[0][sort_by]:
+                best_config = results_store[0]
+            print(impepdom.time_tracker.now() + 'experiment {} results saved'.format(experiment_count))
+
+    time_elapsed = time.time() - since
+    print(impepdom.time_tracker.now() + 'evaluation completed!'.format(
+            time_elapsed // 60, time_elapsed % 60))
+
+    return best_config
 
 def run_experiment(
     model, dataset, train_fold_idx, val_fold_idx=None,
     criterion=None, optimizer=None, scheduler=None,
-    batch_size=64, num_epochs=25, learning_rate=1e-3, show_output=True
+    batch_size=64, num_epochs=25, learning_rate=1e-3, show_output=True,
+    which_model=None
 ):
     '''
     Run a neural network training on specified train and validation set, with parameters.
@@ -44,10 +157,19 @@ def run_experiment(
     show_output: bool
         Show output of training process (everything will be saved anyway)
 
+    which_model: string
+        Attach results to the same model if we're just doing cross-validation
+
     Returns
     ----------
-    save_folder: string
-        Relative path where the cache is located
+    folder: string
+        Path inside STORE_PATH to folder storing training cache
+
+    baseline_metrics: dict
+        Dictionary of baseline metrics in train (and val) datasets
+
+    config: dict
+        Dictionary of configurations used in the training process
     '''
     
     need_validation = False if val_fold_idx is None else True
@@ -74,7 +196,6 @@ def run_experiment(
     baseline_metrics = get_baseline_metrics(dataset, train_fold_idx, val_fold_idx)
 
     # train the model, collect data
-    
     model, train_history = impepdom.train_nn(
         model=model,
         peploader=peploader,
@@ -83,23 +204,31 @@ def run_experiment(
         scheduler=scheduler,
         num_epochs=num_epochs,
         learning_rate=learning_rate,
-        validation=need_validation)
+        validation=need_validation,
+        show_output=show_output
+    )
 
     # save model
-    save_folder = store_manager.get_save_path(model, dataset.get_allele(), train_fold_idx)
-    torch.save(model.state_dict(), os.path.join(save_folder, 'torch_model'))
+    folder = impepdom.store_manager.get_save_path(model, dataset.get_allele(), train_fold_idx, which_model=which_model)
+    torch.save(model.state_dict(), os.path.join(impepdom.store_manager.STORE_PATH, folder, 'torch_model'))
     
     # save training history
-    store_manager.pickle_dump(train_history, save_folder, 'train_history')
+    impepdom.store_manager.pickle_dump(train_history, folder, 'train_history')
 
     # save validation predictions
     if need_validation:
         val = {}
         data, val['target'] = dataset.get_fold(val_fold_idx)
         val['pred'] = model(torch.tensor(data).float())
-        store_manager.pickle_dump(val, save_folder, 'validation_' + store_manager.list_to_str(val_fold_idx))
+        impepdom.store_manager.pickle_dump(val, folder, 'val_' + impepdom.store_manager.list_to_str(val_fold_idx))
 
-    return save_folder, baseline_metrics
+    config = {
+        # pass these parameters in a more obvious and descriptive way in the future
+        'optimizer': str(optimizer)[:str(optimizer).find(' ')],
+        'scheduler': 'CosineAnnealingLR'  # hard code for now
+    }
+
+    return folder, baseline_metrics, config
 
 def plot_train_history(train_history, baseline_metrics=None, metrics=['loss', 'acc', 'auc']):
     '''
@@ -137,11 +266,12 @@ def plot_train_history(train_history, baseline_metrics=None, metrics=['loss', 'a
 
     plt.show()
 
-def get_baseline_metrics(dataset, train_fold_idx, val_fold_idx):
+def get_baseline_metrics(dataset, train_fold_idx, val_fold_idx): 
     baseline_metrics = {
         'train': {},
         'val': {}
     }
+    metrics = impepdom.metrics.METRICS
 
     _, train_targets = dataset.get_fold(fold_idx=train_fold_idx)
     train_zeros = np.zeros(train_targets.shape)
@@ -160,5 +290,3 @@ def get_baseline_metrics(dataset, train_fold_idx, val_fold_idx):
 def list_to_str(ls):
     _str = ''.join(sorted([str(c) for c in ls]))
     return _str
-
-
