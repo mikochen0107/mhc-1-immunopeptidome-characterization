@@ -290,4 +290,3 @@ def get_baseline_metrics(dataset, train_fold_idx, val_fold_idx):
 def list_to_str(ls):
     _str = ''.join(sorted([str(c) for c in ls]))
     return _str
-
