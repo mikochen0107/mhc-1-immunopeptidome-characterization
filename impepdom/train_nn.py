@@ -25,12 +25,15 @@ def train_nn(model, peploader, criterion, optimizer, scheduler=None, num_epochs=
         Trained neural network
     train_history: dict
         Dictionary of defined metrics for train and val sets for each epoch
+    state_dicts: list
+        List of model state dictionaries at each epoch
     '''
 
     since = time.time()
     train_history = init_train_hist()
     best_model_wts = copy.deepcopy(model.state_dict())
     best_auc = 0.0
+    state_dicts = []
     
     # enable training on whole dataset after all validations
     phases = ['train']
@@ -92,6 +95,8 @@ def train_nn(model, peploader, criterion, optimizer, scheduler=None, num_epochs=
             epoch_loss = train_history[phase]['metrics']['loss'][-1]
             epoch_acc = train_history[phase]['metrics']['acc'][-1]
             epoch_auc = train_history[phase]['metrics']['auc'][-1]
+
+            state_dicts.append(model.state_dict())
             
             if show_output:
                 print('{} loss: {:.4f} acc: {:.4f} auc: {:.4f}'.format(
@@ -112,7 +117,7 @@ def train_nn(model, peploader, criterion, optimizer, scheduler=None, num_epochs=
         print('best {} auc: {:.4f}'.format('validation' if validation else 'training', best_auc))
 
     model.load_state_dict(best_model_wts)
-    return model, train_history
+    return model, train_history, state_dicts
 
 def init_train_hist():
     '''

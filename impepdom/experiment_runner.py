@@ -196,7 +196,7 @@ def run_experiment(
     baseline_metrics = get_baseline_metrics(dataset, train_fold_idx, val_fold_idx)
 
     # train the model, collect data
-    model, train_history = impepdom.train_nn(
+    model, train_history, state_dicts = impepdom.train_nn(
         model=model,
         peploader=peploader,
         criterion=criterion,
@@ -208,9 +208,13 @@ def run_experiment(
         show_output=show_output
     )
 
-    # save model
     folder = impepdom.store_manager.get_save_path(model, dataset.get_allele(), train_fold_idx, which_model=which_model)
-    torch.save(model.state_dict(), os.path.join(impepdom.store_manager.STORE_PATH, folder, 'torch_model'))
+    # save model
+    state_dict_folder = os.path.join(impepdom.store_manager.STORE_PATH, folder, 'torch_models')
+    os.makedirs(state_dict_folder, exist_ok=True)
+    torch.save(model.state_dict(), os.path.join(impepdom.store_manager.STORE_PATH, folder, 'best_model'))  # store best model
+    for i, state_dict in enumerate(state_dicts):
+        torch.save(state_dict, os.path.join(state_dict_folder, 'epoch_{}'.format(i)))
     
     # save training history
     impepdom.store_manager.pickle_dump(train_history, folder, 'train_history')

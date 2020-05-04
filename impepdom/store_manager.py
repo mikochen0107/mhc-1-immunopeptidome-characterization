@@ -76,7 +76,7 @@ def load_trained_model(model, folder):
     '''
 
     # fetch trained torch model
-    model_path = os.path.join(STORE_PATH, folder, 'torch_model')
+    model_path = os.path.join(STORE_PATH, folder, 'best_model')
     model.load_state_dict(torch.load(model_path))
     model.eval()  # set to inference mode
 
