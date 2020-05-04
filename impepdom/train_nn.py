@@ -121,7 +121,7 @@ def init_train_hist():
     Returns
     ----------
     train_history: dict
-        Dictionary to contain training (and validation) metric logs over epochs
+        Dictionary to contain training (and validation) output and metric logs over epochs
     '''
 
     metrics = ['loss'] + impepdom.metrics.METRICS

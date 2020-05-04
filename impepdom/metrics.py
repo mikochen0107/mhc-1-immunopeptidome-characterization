@@ -66,6 +66,7 @@ def calculate_metrics(train_history, override=False):
 	Parameters
 	-----------
 	train_history: dict
+        Dictionary storing training (and validation) output and metric logs over epochs
 
 	override: bool, optional
 		Re-write the whole train history metrics
