@@ -92,6 +92,7 @@ def train_nn(model, peploader, criterion, optimizer, scheduler=None, num_epochs=
 
             epoch_auc = impepdom.metrics.auc(y_actual, y_proba)
             epoch_auc_01 = impepdom.metrics.auc_01(y_actual, y_proba)
+            epoch_pcc = impepdom.metrics.pcc(y_actual, y_proba)
 
             epoch_ppv = impepdom.metrics.ppv(y_actual, y_proba) 
             epoch_ppv_100 = impepdom.metrics.ppv_100(y_actual, y_proba)
@@ -103,6 +104,7 @@ def train_nn(model, peploader, criterion, optimizer, scheduler=None, num_epochs=
 
             train_history[phase]['auc'].append(epoch_auc)
             train_history[phase]['auc_01'].append(epoch_auc_01)
+            train_history[phase]['pcc'].append(epoch_pcc)
 
             train_history[phase]['ppv'].append(epoch_ppv)
             train_history[phase]['ppv_100'].append(epoch_ppv_100)
@@ -137,7 +139,7 @@ def init_train_hist():
         Dictionary to contain training (and validation) metric logs over epochs
     '''
 
-    metrics = ['loss', 'acc', 'f1', 'auc', 'auc_01', 'ppv', 'ppv_100']
+    metrics = ['loss'] + impepdom.metrics.METRICS
     train_history = {
         'train': {},
         'val': {}

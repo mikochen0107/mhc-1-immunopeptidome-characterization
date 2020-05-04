@@ -3,7 +3,7 @@ from scipy.stats import pearsonr
 import numpy as np
 
 
-METRICS = ['acc', 'f1', 'auc', 'auc_01', 'ppv', 'ppv_100']
+METRICS = ['acc', 'f1', 'auc', 'auc_01', 'pcc', 'ppv', 'ppv_100']
 DESC_STATS = [('mean', np.mean), ('min', np.min), ('max', np.max)]
 
 def auc(y_true, y_proba):
@@ -32,7 +32,7 @@ def pcc(y_true, y_proba):
 	The function from scipy is used, where the first returned value is the coefficient and the second value is the p-value. We only want the first one.
 	'''
 
-	pcc_score = pearsonr(y_true, y_proba)[0] 
+	pcc_score = pearsonr(y_true.flatten(), y_proba.flatten())[0] 
 
 	return pcc_score
 
