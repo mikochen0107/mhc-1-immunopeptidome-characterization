@@ -91,7 +91,7 @@ def hyperparam_grid_search(
 
                 _, train_history = impepdom.load_trained_model(model, folder)            
                 for metric in metrics:
-                    cross_eval[metric].append(train_history['val'][metric])  # get metric over epochs
+                    cross_eval[metric].append(train_history['val']['metrics'][metric])  # get metric over epochs
                 which_model = impepdom.store_manager.extract_which_model(folder)  # to keep in the same folder
             
             for epoch in range(max_epochs):
@@ -245,16 +245,16 @@ def plot_train_history(train_history, baseline_metrics=None, metrics=['loss', 'a
     matplotlib.rcParams['axes.spines.right'] = False
     matplotlib.rcParams['axes.spines.top'] = False
 
-    num_epochs = len(train_history['train']['loss'])
-    val_exists = len(train_history['val']['loss']) > 0 
+    num_epochs = len(train_history['train']['metrics']['loss'])
+    val_exists = len(train_history['val']['metrics']['loss']) > 0 
 
     plt.figure(figsize=(16, 5))
     for i, metric in enumerate(metrics):
         plt.subplot(1, len(metrics), i + 1)
 
-        plt.plot(range(num_epochs), train_history['train'][metric], color='skyblue', label='train')
+        plt.plot(range(num_epochs), train_history['train']['metrics'][metric], color='skyblue', label='train')
         if val_exists:
-            plt.plot(range(num_epochs), train_history['val'][metric], color='darkorange', label='val')
+            plt.plot(range(num_epochs), train_history['val']['metrics'][metric], color='darkorange', label='val')
         if baseline_metrics and metric != 'loss':
             plt.axhline(y=baseline_metrics['train'][metric] + 1e-3, color='skyblue', alpha=0.7, linestyle='--', label='train base')
             if 'acc' in baseline_metrics['val']:
