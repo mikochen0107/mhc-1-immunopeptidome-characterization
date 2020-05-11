@@ -118,7 +118,7 @@ def update_hyperparams_store(results_store):
 
     folder = results_store[0]['model']
     new_hyperparam_df = pd.DataFrame(new_hyperparam_vals)
-    hyperparams_path = os.path.join(STORE_PATH, 'hyperparams', folder + '.csv')
+    hyperparams_path = os.path.join(STORE_PATH, 'hyperparams', folder[:folder.find('/')] + '.csv')
 
     if not os.path.exists(hyperparams_path):
         new_hyperparam_df.to_csv(hyperparams_path)

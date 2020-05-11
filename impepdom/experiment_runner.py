@@ -96,7 +96,7 @@ def hyperparam_grid_search(
             
             for epoch in range(max_epochs):
                 res_obj = {
-                    'model': folder[:folder.find('/')],
+                    'model': which_model,
                     'padding': padding,
                     'batch_size': batch_size,
                     'num_epochs': epoch + 1,
