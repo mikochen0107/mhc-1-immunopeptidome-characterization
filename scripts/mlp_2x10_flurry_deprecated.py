@@ -36,7 +36,7 @@ for i, hla_allele in enumerate(hla_alleles_rerun):  # change allele list here
         toy=False
     )
         
-    best_config = impepdom.hyperparam_grid_search(
+    best_config = impepdom.hyperparam_search(
         model,
         dataset,
         max_epochs=15,

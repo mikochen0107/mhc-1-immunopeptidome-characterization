@@ -15,7 +15,7 @@ for i, hla_allele in enumerate(hla_alleles):
         padding='end',
         toy=False)
         
-    results = impepdom.hyperparam_grid_search(
+    results = impepdom.hyperparam_search(
         model,
         dataset,
         epochs=[5, 10, 15],

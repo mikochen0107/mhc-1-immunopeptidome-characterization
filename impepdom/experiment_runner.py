@@ -16,7 +16,7 @@ from sklearn.metrics import roc_auc_score
 import impepdom
 
 
-def hyperparam_grid_search(
+def hyperparam_search(
     model_type, dataset, fold_idx=[0, 1, 2, 3],
     max_epochs=15, batch_sizes=[32, 64, 128], learning_rates=[5e-4, 1e-3, 5e-3],
     dropout_input_list=[0.85], dropout_hidden_list=[0.65],
@@ -83,13 +83,13 @@ def hyperparam_grid_search(
         for metric in metrics:
             cross_eval[metric] = []
         
-        which_model = None
+        model_run_time = None
         for val_fold_id in fold_idx:
             train_fold_idx = copy.copy(fold_idx)
             train_fold_idx.remove(val_fold_id)  # remove validation fold
 
             folder, _, config = run_experiment(
-                model,
+                model_type=model_type,
                 dataset,
                 train_fold_idx=train_fold_idx,
                 val_fold_idx=[val_fold_id],
@@ -107,17 +107,17 @@ def hyperparam_grid_search(
                 conv_stride=hyperparams[7],
 
                 show_output=False,
-                which_model=which_model
+                model_run_time=model_run_time
             )
 
-            _, train_history = impepdom.load_trained_model(model, folder)            
+            train_history = impepdom.load_train_history(model, folder)            
             for metric in metrics:
                 cross_eval[metric].append(train_history['val']['metrics'][metric])  # get metric over epochs
-            which_model = impepdom.store_manager.extract_which_model(folder)  # to keep in the same folder
+            model_run_time = impepdom.store_manager.extract_model_run_time(folder)  # to keep in the same folder
         
         for epoch in range(max_epochs):
             res_obj = {
-                'model': which_model,
+                'model': model_run_time,
                 'padding': padding,
                 'batch_size': hyperparams[0],
                 'num_epochs': epoch + 1,
@@ -159,7 +159,7 @@ def run_experiment(
     batch_size=64, num_epochs=25, learning_rate=1e-3, show_output=True,
     dropout_input=0.85, dropout_hidden=0.65,
     conv=False, num_conv_layers=None, conv_filt_sz=None, conv_stride=None,
-    which_model=None
+    model_run_time=None
 ):
     '''
     Run a neural network training on specified train and validation set, with parameters.
@@ -189,7 +189,7 @@ def run_experiment(
     show_output: bool
         Show output of training process (everything will be saved anyway)
 
-    which_model: string
+    model_run_time: string
         Attach results to the same model if we're just doing cross-validation
 
     Returns
@@ -253,7 +253,7 @@ def run_experiment(
         show_output=show_output
     )
 
-    folder = impepdom.store_manager.get_save_path(model, dataset.get_allele(), train_fold_idx, which_model=which_model)
+    folder = impepdom.store_manager.get_save_path(model, dataset.get_allele(), train_fold_idx, model_run_time=model_run_time)
     # save model
     state_dict_folder = os.path.join(impepdom.store_manager.STORE_PATH, folder, 'torch_models')
     os.makedirs(state_dict_folder, exist_ok=True)

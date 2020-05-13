@@ -57,6 +57,14 @@ class MultilayerPerceptron(nn.Module):
         name = "mlp_{0}x{1}".format(self.num_hid, self.hid_sz) + if_cnn
         return name
 
+def initialized_model(model_type):
+    '''
+    model_type: string
+        String of class name of neural network to be used
+    '''
+
+    return models[model_type](MultilayerPerceptron)
+
 models = {
     'MultilayerPerceptron': MultilayerPerceptron,
 }
