@@ -25,12 +25,15 @@ def train_nn(model, peploader, criterion, optimizer, scheduler=None, num_epochs=
         Trained neural network
     train_history: dict
         Dictionary of defined metrics for train and val sets for each epoch
+    state_dicts: list
+        List of model state dictionaries at each epoch
     '''
 
     since = time.time()
     train_history = init_train_hist()
     best_model_wts = copy.deepcopy(model.state_dict())
     best_auc = 0.0
+    state_dicts = []
     
     # enable training on whole dataset after all validations
     phases = ['train']
@@ -80,37 +83,26 @@ def train_nn(model, peploader, criterion, optimizer, scheduler=None, num_epochs=
                 running_loss += loss.item() * pep.size(0)
                 count += pep.size(0)
             
-            # add epoch metrics to training history
-            y_actual = np.vstack(y_actual)
-            y_pred = np.vstack(y_pred)
-            y_proba = np.vstack(y_proba)
+            # add epoch labels and predictions to training history
+            train_history[phase]['out']['actual'].append(np.vstack(y_actual))
+            train_history[phase]['out']['pred'].append(np.vstack(y_pred))
+            train_history[phase]['out']['proba'].append(np.vstack(y_proba))
 
             # calculate metrics for the model at current epoch
-            epoch_loss = running_loss / count
-            epoch_acc = impepdom.metrics.acc(y_actual, y_pred)
-            epoch_f1 = impepdom.metrics.f1(y_actual, y_pred) 
+            train_history[phase]['metrics']['loss'].append(running_loss / count) 
+            train_history[phase]['metrics'] = impepdom.metrics.calculate_metrics(train_history)[phase]
 
-            epoch_auc = impepdom.metrics.auc(y_actual, y_proba)
-            epoch_auc_01 = impepdom.metrics.auc_01(y_actual, y_proba)
+            epoch_loss = train_history[phase]['metrics']['loss'][-1]
+            epoch_acc = train_history[phase]['metrics']['acc'][-1]
+            epoch_auc = train_history[phase]['metrics']['auc'][-1]
 
-            epoch_ppv = impepdom.metrics.ppv(y_actual, y_proba) 
-            epoch_ppv_100 = impepdom.metrics.ppv_100(y_actual, y_proba)
-
-            # save calculated metrics to the training history
-            train_history[phase]['loss'].append(epoch_loss)
-            train_history[phase]['acc'].append(epoch_acc)
-            train_history[phase]['f1'].append(epoch_f1)
-
-            train_history[phase]['auc'].append(epoch_auc)
-            train_history[phase]['auc_01'].append(epoch_auc_01)
-
-            train_history[phase]['ppv'].append(epoch_ppv)
-            train_history[phase]['ppv_100'].append(epoch_ppv_100)
+            state_dicts.append(model.state_dict())
             
             if show_output:
-                print('{} loss: {:.4f} accuracy: {:.4f} auc: {:.4f}'.format(
+                print('{} loss: {:.4f} acc: {:.4f} auc: {:.4f}'.format(
                     phase, epoch_loss, epoch_acc, epoch_auc))
 
+            # select best model
             if (phase == 'val' or not validation) and epoch_auc > best_auc:
                 best_auc = epoch_auc
                 best_model_wts = copy.deepcopy(model.state_dict())
@@ -125,7 +117,7 @@ def train_nn(model, peploader, criterion, optimizer, scheduler=None, num_epochs=
         print('best {} auc: {:.4f}'.format('validation' if validation else 'training', best_auc))
 
     model.load_state_dict(best_model_wts)
-    return model, train_history
+    return model, train_history, state_dicts
 
 def init_train_hist():
     '''
@@ -134,17 +126,31 @@ def init_train_hist():
     Returns
     ----------
     train_history: dict
-        Dictionary to contain training (and validation) metric logs over epochs
+        Dictionary to contain training (and validation) output and metric logs over epochs
     '''
 
-    metrics = ['loss', 'acc', 'f1', 'auc', 'auc_01', 'ppv', 'ppv_100']
+    metrics = ['loss'] + impepdom.metrics.METRICS
     train_history = {
-        'train': {},
-        'val': {}
+        'train': {'metrics': {}, 'out': {}},
+        'val': {'metrics': {}, 'out': {}}
     }
 
     for metric in metrics:
-        train_history['train'][metric] = []
-        train_history['val'][metric] = []
+        train_history['train']['metrics'][metric] = []
+        train_history['val']['metrics'][metric] = []
+
+    out_types = ['actual', 'proba', 'pred'] 
+
+    # initialize dictionaries for model outputs
+    for out_type in out_types:
+        train_history['train']['out'][out_type] = []
+        train_history['val']['out'][out_type] = []
 
     return train_history
+
+
+'''
+train_history['train']['metrics']['pcc']
+train_history['train']['out']['pred'], ['proba'], ['actual']
+train_history['train']
+'''

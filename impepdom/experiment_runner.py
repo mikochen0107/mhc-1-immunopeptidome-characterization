@@ -19,6 +19,8 @@ import impepdom
 def hyperparam_grid_search(
     model, dataset, fold_idx=[0, 1, 2, 3],
     max_epochs=15, batch_sizes=[32, 64, 128], learning_rates=[5e-4, 1e-3, 5e-3],
+    dropout_input_list=[0.85], dropout_hidden_list=[0.65],
+    conv=False, num_conv_layers_list=[1], conv_filt_sz_list=[5], conv_stride=[1]
     optimizer=None, scheduler=None, sort_by='mean_auc_01'
 ):
     '''
@@ -91,12 +93,12 @@ def hyperparam_grid_search(
 
                 _, train_history = impepdom.load_trained_model(model, folder)            
                 for metric in metrics:
-                    cross_eval[metric].append(train_history['val'][metric])  # get metric over epochs
+                    cross_eval[metric].append(train_history['val']['metrics'][metric])  # get metric over epochs
                 which_model = impepdom.store_manager.extract_which_model(folder)  # to keep in the same folder
             
             for epoch in range(max_epochs):
                 res_obj = {
-                    'model': folder[:folder.find('/')],
+                    'model': which_model,
                     'padding': padding,
                     'batch_size': batch_size,
                     'num_epochs': epoch + 1,
@@ -196,7 +198,7 @@ def run_experiment(
     baseline_metrics = get_baseline_metrics(dataset, train_fold_idx, val_fold_idx)
 
     # train the model, collect data
-    model, train_history = impepdom.train_nn(
+    model, train_history, state_dicts = impepdom.train_nn(
         model=model,
         peploader=peploader,
         criterion=criterion,
@@ -208,9 +210,13 @@ def run_experiment(
         show_output=show_output
     )
 
-    # save model
     folder = impepdom.store_manager.get_save_path(model, dataset.get_allele(), train_fold_idx, which_model=which_model)
-    torch.save(model.state_dict(), os.path.join(impepdom.store_manager.STORE_PATH, folder, 'torch_model'))
+    # save model
+    state_dict_folder = os.path.join(impepdom.store_manager.STORE_PATH, folder, 'torch_models')
+    os.makedirs(state_dict_folder, exist_ok=True)
+    torch.save(model.state_dict(), os.path.join(impepdom.store_manager.STORE_PATH, folder, 'best_model'))  # store best model
+    for i, state_dict in enumerate(state_dicts):
+        torch.save(state_dict, os.path.join(state_dict_folder, 'epoch_{}'.format(i)))
     
     # save training history
     impepdom.store_manager.pickle_dump(train_history, folder, 'train_history')
@@ -245,16 +251,16 @@ def plot_train_history(train_history, baseline_metrics=None, metrics=['loss', 'a
     matplotlib.rcParams['axes.spines.right'] = False
     matplotlib.rcParams['axes.spines.top'] = False
 
-    num_epochs = len(train_history['train']['loss'])
-    val_exists = len(train_history['val']['loss']) > 0 
+    num_epochs = len(train_history['train']['metrics']['loss'])
+    val_exists = len(train_history['val']['metrics']['loss']) > 0 
 
     plt.figure(figsize=(16, 5))
     for i, metric in enumerate(metrics):
         plt.subplot(1, len(metrics), i + 1)
 
-        plt.plot(range(num_epochs), train_history['train'][metric], color='skyblue', label='train')
+        plt.plot(range(num_epochs), train_history['train']['metrics'][metric], color='skyblue', label='train')
         if val_exists:
-            plt.plot(range(num_epochs), train_history['val'][metric], color='darkorange', label='val')
+            plt.plot(range(num_epochs), train_history['val']['metrics'][metric], color='darkorange', label='val')
         if baseline_metrics and metric != 'loss':
             plt.axhline(y=baseline_metrics['train'][metric] + 1e-3, color='skyblue', alpha=0.7, linestyle='--', label='train base')
             if 'acc' in baseline_metrics['val']:

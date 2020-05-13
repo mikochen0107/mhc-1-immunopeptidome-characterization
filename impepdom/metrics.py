@@ -1,10 +1,12 @@
 from sklearn.metrics import roc_auc_score, accuracy_score, f1_score
 from scipy.stats import pearsonr
 import numpy as np
+import copy
 
 
-METRICS = ['acc', 'f1', 'auc', 'auc_01', 'ppv', 'ppv_100']
+METRICS = ['acc', 'f1', 'auc', 'auc_01', 'pcc', 'ppv', 'ppv_100']
 DESC_STATS = [('mean', np.mean), ('min', np.min), ('max', np.max)]
+
 
 def auc(y_true, y_proba):
 	return roc_auc_score(y_true, y_proba)
@@ -32,7 +34,7 @@ def pcc(y_true, y_proba):
 	The function from scipy is used, where the first returned value is the coefficient and the second value is the p-value. We only want the first one.
 	'''
 
-	pcc_score = pearsonr(y_true, y_proba)[0] 
+	pcc_score = pearsonr(y_true.flatten(), y_proba.flatten())[0] 
 
 	return pcc_score
 
@@ -56,3 +58,48 @@ def acc(y_true, y_pred):
 
 def f1(y_true, y_pred):
 	return f1_score(y_true, y_pred) 
+
+def calculate_metrics(train_history, override=False):
+	'''
+	Calculates specified metrics per epoch based on model outputs.
+
+	Parameters
+	-----------
+	train_history: dict
+        Dictionary storing training (and validation) output and metric logs over epochs
+
+	override: bool, optional
+		Re-write the whole train history metrics
+
+	Returns
+	----------
+	metrics_history: dict
+		Dictionary corresponding to train_history[phase]['metrics']
+	'''
+
+	metrics_history = {}
+	for phase in train_history.keys():
+		# initialize dictionary to store calculated metrics
+		calc_metrics = copy.deepcopy(train_history[phase]['metrics'])
+		
+		# calculate metrics for the model at each epoch
+		num_epochs = len(train_history[phase]['out']['actual'])
+		epochs = range(num_epochs) if (override or num_epochs == 0) else [-1]
+		for epoch in epochs:
+			y_actual = train_history[phase]['out']['actual'][epoch]
+			y_pred = train_history[phase]['out']['pred'][epoch]
+			y_proba = train_history[phase]['out']['proba'][epoch]
+
+			calc_metrics['acc'].append(acc(y_actual, y_pred))
+			calc_metrics['f1'].append(f1(y_actual, y_pred) )
+
+			calc_metrics['auc'].append(auc(y_actual, y_proba))
+			calc_metrics['auc_01'].append(auc_01(y_actual, y_proba))
+			calc_metrics['pcc'].append(pcc(y_actual, y_proba))
+
+			calc_metrics['ppv'].append(ppv(y_actual, y_proba))
+			calc_metrics['ppv_100'].append(ppv_100(y_actual, y_proba))
+	
+		metrics_history[phase] = calc_metrics
+
+	return metrics_history
