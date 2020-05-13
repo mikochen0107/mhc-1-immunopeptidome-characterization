@@ -97,16 +97,6 @@ def update_hyperparams_store(results_store):
     results_store: dict
         Dictionary containing model name, hyperparam settings, and evaluation metrics
     '''
-
-    # {
-    #     'model': folder,
-    #     'mean_' + _eval: np.mean(cross_eval),
-    #     'min_' + _eval: np.min(cross_eval),
-    #     'max_' + _eval: np.max(cross_eval),
-    #     'batch_size': batch_size,
-    #     'num_epochs': num_epochs,
-    #     'learning_rate': learning_rate,
-     #           }
     
     new_hyperparam_vals = get_hyperparams_store_template()
     for res in results_store:
@@ -201,6 +191,13 @@ def get_hyperparams_store_template():
         'learning_rate': [],
         'optimizer': [],
         'scheduler': [],
+
+        'dropout_input': [],
+        'dropout_hidden': [],
+        'conv': [],
+        'num_conv_layers': [],
+        'conv_filt_sz': [],
+        'conv_stride': [],
     }
 
     # initilize space for metrics

@@ -53,5 +53,10 @@ class MultilayerPerceptron(nn.Module):
         return x
 
     def get_my_name(self):
-        name = "mlp_{0}x{1}".format(self.num_hid, self.hid_sz) 
+        if_cnn = if self.conv then '_cnn' else ''  # add a suffix to indicate it's CNN
+        name = "mlp_{0}x{1}".format(self.num_hid, self.hid_sz) + if_cnn
         return name
+
+models = {
+    'MultilayerPerceptron': MultilayerPerceptron,
+}
