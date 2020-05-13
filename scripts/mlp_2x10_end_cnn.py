@@ -30,7 +30,7 @@ for i, hla_allele in enumerate(hla_alleles_khoi_1):  # change allele list here
     
     dataset = impepdom.PeptideDataset(
         hla_allele=hla_allele,  
-        padding='flurry',
+        padding='end',
         toy=False
     )
         
@@ -38,8 +38,8 @@ for i, hla_allele in enumerate(hla_alleles_khoi_1):  # change allele list here
         model_type='MultilayerPerceptron',
         dataset,
         max_epochs=15,
-        batch_sizes=[32, 64, 128],
-        learning_rates=[5e-4, 1e-3, 5e-3, 1e-2, 5e-2, 1e-1],
+        batch_sizes=[32, 64],
+        learning_rates=[5e-4, 1e-3, 5e-3, 1e-2],
         dropout_input_list=[0.6, 0.85],
         dropout_hidden_list=[0.4, 0.65],
         conv_flags=[True],
