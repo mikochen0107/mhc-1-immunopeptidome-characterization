@@ -1,4 +1,4 @@
-datasets/MHC_I_el_allele_specific
+datasets
 store/*
 !store/hyperparams/*
 .DS_Store
