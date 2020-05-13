@@ -128,6 +128,9 @@ def update_hyperparams_store(results_store):
         hyperparam_df.sort_values(by=['mean_auc', 'min_auc'], inplace=True, ascending=[False, False], ignore_index=True)
         hyperparam_df.to_csv(hyperparams_path)
 
+def update_metrics(model_run_time):
+    pass
+
 def fetch_best_hyperparams(model_name, _eval):
     '''
     Retrieve best hyperparameter settings for a model based on evaluation metric.

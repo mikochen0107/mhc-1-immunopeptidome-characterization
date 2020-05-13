@@ -69,7 +69,7 @@ def hyperparam_grid_search(
             metrics = impepdom.metrics.METRICS
             desc_stats = impepdom.metrics.DESC_STATS
             
-            cross_eval = {}  # store history of validation metrics. Per metric: columns are epochs, rows are results on folds
+            cross_eval = {}  # store history of metrics; per metric: columns are epochs, rows are results on folds
             for metric in metrics:
                 cross_eval[metric] = []
             
@@ -96,6 +96,7 @@ def hyperparam_grid_search(
                     cross_eval[metric].append(train_history['val']['metrics'][metric])  # get metric over epochs
                 which_model = impepdom.store_manager.extract_which_model(folder)  # to keep in the same folder
             
+            ### calculating metrics 
             for epoch in range(max_epochs):
                 res_obj = {
                     'model': which_model,
@@ -236,6 +237,7 @@ def run_experiment(
 
     return folder, baseline_metrics, config
 
+# !!! Maybe take this out to a separate module !!!
 def plot_train_history(train_history, baseline_metrics=None, metrics=['loss', 'acc', 'auc']):
     '''
     Plot metrics to observe training (vs validation) progress.

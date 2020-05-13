@@ -15,7 +15,7 @@ class MultilayerPerceptron(nn.Module):
         Parameters
         ----------
         input_size: int
-            Length of input vector, should be NUM_AA * max_aa_len
+            Length of input vector, should be NUM_AA * max_pep_len
         
         num_hidden_layers: int
             Number of equivalent hidden layers
@@ -97,6 +97,3 @@ class MultilayerPerceptron(nn.Module):
     def get_my_name(self):
         name = "mlp_{0}x{1}".format(self.num_hid, self.hid_sz) 
         return name
-
-
-    
