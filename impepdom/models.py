@@ -12,7 +12,7 @@ class MultilayerPerceptron(nn.Module):
         Parameters
         ----------
         input_size: int
-            Length of input vector, should be NUM_AA * max_aa_len
+            Length of input vector, should be NUM_AA * max_pep_len
         
         num_hidden_layers: int
             Number of equivalent hidden layers
