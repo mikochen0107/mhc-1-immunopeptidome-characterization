@@ -1,6 +1,6 @@
 import os
 import pickle
-from itertools import permutations
+from itertools import permutations, product
 import copy
 import time
 
@@ -16,16 +16,18 @@ from sklearn.metrics import roc_auc_score
 import impepdom
 
 
-def hyperparam_grid_search(
-    model, dataset, fold_idx=[0, 1, 2, 3],
+def hyperparam_search(
+    model_type, dataset, fold_idx=[0, 1, 2, 3],
     max_epochs=15, batch_sizes=[32, 64, 128], learning_rates=[5e-4, 1e-3, 5e-3],
+    dropout_input_list=[0.85], dropout_hidden_list=[0.65],
+    conv_flags=[True], num_conv_layers_list=[1], conv_filt_sz_list=[5], conv_stride_list=[1],
     optimizer=None, scheduler=None, sort_by='mean_auc_01'
 ):
     '''
     Parameters
     ----------
-    model: nn.Module
-        Defined neural network
+    model_type: string
+        String of class name of neural network to be used
 
     dataset: impepdom.PeptideDataset
         Initialized peptide dataset for MHC I
@@ -45,6 +47,8 @@ def hyperparam_grid_search(
     sort_by: string, optional
         Sort results to present, desc_stat + metric. Examples: 'mean_acc', 'min_auc_01', 'max_ppv'
 
+    !!! COPY PARAMETERS DESCRIPTION FROM MODELS.PY !!!
+
     Returns
     ----------
     best_config: dict
@@ -58,67 +62,90 @@ def hyperparam_grid_search(
     padding = dataset.padding
     best_config = None
 
-    for batch_size in batch_sizes:
-        for learning_rate in learning_rates:
-            print(impepdom.time_tracker.now() + 'running experiment {} out of {}'.format(experiment_count + 1, tot_experiments))
-            experiment_count += 1
-            results_store = []  # to store model names and scores
+    for hyperparams in product(
+        batch_sizes,  # 0
+        learning_rates,  # 1
+        dropout_input_list,  # 2
+        dropout_hidden_list,  # 3
+        conv_flags,  # 4
+        num_conv_layers_list,  # 5
+        conv_filt_sz_list,  # 6
+        conv_stride_list  # 7
+    ):
+        print(impepdom.time_tracker.now() + 'running experiment {} out of {}'.format(experiment_count + 1, tot_experiments))
+        experiment_count += 1
+        results_store = []  # to store model names and scores
 
-            metrics = impepdom.metrics.METRICS
-            desc_stats = impepdom.metrics.DESC_STATS
-            
-            cross_eval = {}  # store history of metrics; per metric: columns are epochs, rows are results on folds
+        metrics = impepdom.metrics.METRICS
+        desc_stats = impepdom.metrics.DESC_STATS
+        
+        cross_eval = {}  # store history of validation metrics. Per metric: columns are epochs, rows are results on folds
+        for metric in metrics:
+            cross_eval[metric] = []
+        
+        model_run_time = None
+        for val_fold_id in fold_idx:
+            train_fold_idx = copy.copy(fold_idx)
+            train_fold_idx.remove(val_fold_id)  # remove validation fold
+
+            folder, _, config = run_experiment(
+                model_type=model_type,
+                dataset,
+                train_fold_idx=train_fold_idx,
+                val_fold_idx=[val_fold_id],
+                learning_rate=hyperparams[1],
+                num_epochs=max_epochs,
+                batch_size=hyperparams[0],
+                scheduler=scheduler,
+
+                # in-model, non-traning hyperparams
+                dropout_input=hyperparams[2],
+                dropout_hidden=hyperparams[3],
+                conv=hyperparams[4],
+                num_conv_layers=hyperparams[5],
+                conv_filt_sz=hyperparams[6],
+                conv_stride=hyperparams[7],
+
+                show_output=False,
+                model_run_time=model_run_time
+            )
+
+            train_history = impepdom.load_train_history(model, folder)            
             for metric in metrics:
-                cross_eval[metric] = []
-            
-            which_model = None
-            for val_fold_id in fold_idx:
-                train_fold_idx = copy.copy(fold_idx)
-                train_fold_idx.remove(val_fold_id)  # remove validation fold
+                cross_eval[metric].append(train_history['val']['metrics'][metric])  # get metric over epochs
+            model_run_time = impepdom.store_manager.extract_model_run_time(folder)  # to keep in the same folder
+        
+        for epoch in range(max_epochs):
+            res_obj = {
+                'model': model_run_time,
+                'padding': padding,
+                'batch_size': hyperparams[0],
+                'num_epochs': epoch + 1,
+                'learning_rate': hyperparams[1],
+                'optimizer': config['optimizer'],
+                'scheduler': config['scheduler'],
+                
+                'dropout_input': hyperparams[2],
+                'dropout_hidden': hyperparams[3],
+                'conv': hyperparams[4],
+                'num_conv_layers': hyperparams[5],
+                'conv_filt_sz': hyperparams[6],
+                'conv_stride': hyperparams[7],
+            }
 
-                folder, _, config = run_experiment(
-                    model,
-                    dataset,
-                    train_fold_idx=train_fold_idx,
-                    val_fold_idx=[val_fold_id],
-                    learning_rate=learning_rate,
-                    num_epochs=max_epochs,
-                    batch_size=batch_size,
-                    scheduler=scheduler,
-                    show_output=False,
-                    which_model=which_model
-                )
+            for metric in metrics:
+                cross_eval_metric = np.vstack(cross_eval[metric])  # make into one numpy array
+                for desc_stat in desc_stats:
+                    res_obj[desc_stat[0] + '_' + metric] = desc_stat[1](cross_eval_metric[:, epoch])
 
-                _, train_history = impepdom.load_trained_model(model, folder)            
-                for metric in metrics:
-                    cross_eval[metric].append(train_history['val']['metrics'][metric])  # get metric over epochs
-                which_model = impepdom.store_manager.extract_which_model(folder)  # to keep in the same folder
-            
-            ### calculating metrics 
-            for epoch in range(max_epochs):
-                res_obj = {
-                    'model': which_model,
-                    'padding': padding,
-                    'batch_size': batch_size,
-                    'num_epochs': epoch + 1,
-                    'learning_rate': learning_rate,
-                    'optimizer': config['optimizer'],
-                    'scheduler': config['scheduler']
-                }
+            results_store.append(res_obj)
 
-                for metric in metrics:
-                    cross_eval_metric = np.vstack(cross_eval[metric])  # make into one numpy array
-                    for desc_stat in desc_stats:
-                        res_obj[desc_stat[0] + '_' + metric] = desc_stat[1](cross_eval_metric[:, epoch])
+        results_store.sort(key=(lambda model_res: model_res[sort_by]), reverse=True)
+        impepdom.store_manager.update_hyperparams_store(results_store)
 
-                results_store.append(res_obj)
-
-            results_store.sort(key=(lambda model_res: model_res[sort_by]), reverse=True)
-            impepdom.store_manager.update_hyperparams_store(results_store)
-
-            if best_config == None or best_config[sort_by] < results_store[0][sort_by]:
-                best_config = results_store[0]
-            print(impepdom.time_tracker.now() + 'experiment {} results saved'.format(experiment_count))
+        if best_config == None or best_config[sort_by] < results_store[0][sort_by]:
+            best_config = results_store[0]
+        print(impepdom.time_tracker.now() + 'experiment {} results saved'.format(experiment_count))
 
     time_elapsed = time.time() - since
     print(impepdom.time_tracker.now() + 'evaluation completed!'.format(
@@ -127,18 +154,20 @@ def hyperparam_grid_search(
     return best_config
 
 def run_experiment(
-    model, dataset, train_fold_idx, val_fold_idx=None,
+    model_type, dataset, train_fold_idx, val_fold_idx=None,
     criterion=None, optimizer=None, scheduler=None,
     batch_size=64, num_epochs=25, learning_rate=1e-3, show_output=True,
-    which_model=None
+    dropout_input=0.85, dropout_hidden=0.65,
+    conv=False, num_conv_layers=None, conv_filt_sz=None, conv_stride=None,
+    model_run_time=None
 ):
     '''
     Run a neural network training on specified train and validation set, with parameters.
 
     Parameters
     ----------
-    model: nn.Module
-        Defined neural network
+    model_type: string
+        String of class name of neural network to be used
 
     dataset: impepdom.PeptideDataset
         Initialized peptide dataset for MHC I
@@ -155,10 +184,12 @@ def run_experiment(
     num_epochs: int, optional
     learning_rate: float, optional
 
+    !!! COPY PARAMETERS DESCRIPTION FROM MODELS.PY !!!
+
     show_output: bool
         Show output of training process (everything will be saved anyway)
 
-    which_model: string
+    model_run_time: string
         Attach results to the same model if we're just doing cross-validation
 
     Returns
@@ -193,6 +224,19 @@ def run_experiment(
         # decay_factor = 0.9
         # exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=lr_decay_step, gamma=decay_factor)
 
+    # (re-)initialize model
+    model = impepdom.models.models['model_type'](
+        num_hidden_layers=2,
+        hidden_layer_size=100,
+        dropout_input=dropout_input,
+        dropout_hidden=dropout_hidden,
+
+        conv=conv,
+        num_conv_layers=num_conv_layers,
+        conv_filt_sz=conv_filt_sz,
+        conv_stride=conv_stride,
+    ) 
+
     # collect baseline metrics
     baseline_metrics = get_baseline_metrics(dataset, train_fold_idx, val_fold_idx)
 
@@ -209,7 +253,7 @@ def run_experiment(
         show_output=show_output
     )
 
-    folder = impepdom.store_manager.get_save_path(model, dataset.get_allele(), train_fold_idx, which_model=which_model)
+    folder = impepdom.store_manager.get_save_path(model, dataset.get_allele(), train_fold_idx, model_run_time=model_run_time)
     # save model
     state_dict_folder = os.path.join(impepdom.store_manager.STORE_PATH, folder, 'torch_models')
     os.makedirs(state_dict_folder, exist_ok=True)
