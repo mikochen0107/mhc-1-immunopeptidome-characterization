@@ -16,7 +16,7 @@ class PeptideDataset:
     ALL_AA = ['A', 'R', 'N', 'D', 'C', 'E', 'Q', 'G', 'H', 'I', 'L', 'K', 'M', 'F', 'P', 'S', 'T', 'W', 'Y', 'V', 'U', 'X']
     NUM_AA = len(ALL_AA)  # number of amino acids (21 + 1 unknown)
     
-    def __init__(self, hla_allele, root=None, encoding='default', max_aa_len=14, padding='end', test_set='c004', input_format='linear', toy=False):
+    def __init__(self, hla_allele, root=None, encoding='default', max_pep_len=14, padding='end', test_set='c004', input_format='linear', toy=False):
         '''
         Initialize dataset class for each human leukocyte antigen (HLA or MHC) allele.
         
@@ -31,7 +31,7 @@ class PeptideDataset:
         encoding: str, optional
             Amino acid encoding style. Options: 'default', TBD
             
-        max_aa_len: int, optional
+        max_pep_len: int, optional
             
         padding: str, optional
             Padding for amino acid sequence. Options: 'begin', 'end', 'after2', 'flurry'
@@ -52,7 +52,7 @@ class PeptideDataset:
         self.hla_allele = hla_allele
         self.root = self.ROOT if root == None else root
         self.encoding = encoding
-        self.max_aa_len = max_aa_len
+        self.max_pep_len = max_pep_len
         self.padding = padding
         self.test_set = test_set
         self.input_format = input_format
@@ -201,7 +201,7 @@ class PeptideDataset:
             String of padded amino acid sequence (N x 1)
         '''
         
-        pad_len = self.max_aa_len * bits - len(seq)  # number of bits to pad
+        pad_len = self.max_pep_len * bits - len(seq)  # number of bits to pad
         pad_bits = '0' * pad_len
         
         if self.padding == 'begin':

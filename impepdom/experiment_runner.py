@@ -67,7 +67,7 @@ def hyperparam_grid_search(
             metrics = impepdom.metrics.METRICS
             desc_stats = impepdom.metrics.DESC_STATS
             
-            cross_eval = {}  # store history of validation metrics. Per metric: columns are epochs, rows are results on folds
+            cross_eval = {}  # store history of metrics; per metric: columns are epochs, rows are results on folds
             for metric in metrics:
                 cross_eval[metric] = []
             
@@ -91,12 +91,13 @@ def hyperparam_grid_search(
 
                 _, train_history = impepdom.load_trained_model(model, folder)            
                 for metric in metrics:
-                    cross_eval[metric].append(train_history['val'][metric])  # get metric over epochs
+                    cross_eval[metric].append(train_history['val']['metrics'][metric])  # get metric over epochs
                 which_model = impepdom.store_manager.extract_which_model(folder)  # to keep in the same folder
             
+            ### calculating metrics 
             for epoch in range(max_epochs):
                 res_obj = {
-                    'model': folder[:folder.find('/')],
+                    'model': which_model,
                     'padding': padding,
                     'batch_size': batch_size,
                     'num_epochs': epoch + 1,
@@ -196,7 +197,7 @@ def run_experiment(
     baseline_metrics = get_baseline_metrics(dataset, train_fold_idx, val_fold_idx)
 
     # train the model, collect data
-    model, train_history = impepdom.train_nn(
+    model, train_history, state_dicts = impepdom.train_nn(
         model=model,
         peploader=peploader,
         criterion=criterion,
@@ -208,9 +209,13 @@ def run_experiment(
         show_output=show_output
     )
 
-    # save model
     folder = impepdom.store_manager.get_save_path(model, dataset.get_allele(), train_fold_idx, which_model=which_model)
-    torch.save(model.state_dict(), os.path.join(impepdom.store_manager.STORE_PATH, folder, 'torch_model'))
+    # save model
+    state_dict_folder = os.path.join(impepdom.store_manager.STORE_PATH, folder, 'torch_models')
+    os.makedirs(state_dict_folder, exist_ok=True)
+    torch.save(model.state_dict(), os.path.join(impepdom.store_manager.STORE_PATH, folder, 'best_model'))  # store best model
+    for i, state_dict in enumerate(state_dicts):
+        torch.save(state_dict, os.path.join(state_dict_folder, 'epoch_{}'.format(i)))
     
     # save training history
     impepdom.store_manager.pickle_dump(train_history, folder, 'train_history')
@@ -230,6 +235,7 @@ def run_experiment(
 
     return folder, baseline_metrics, config
 
+# !!! Maybe take this out to a separate module !!!
 def plot_train_history(train_history, baseline_metrics=None, metrics=['loss', 'acc', 'auc']):
     '''
     Plot metrics to observe training (vs validation) progress.
@@ -245,16 +251,16 @@ def plot_train_history(train_history, baseline_metrics=None, metrics=['loss', 'a
     matplotlib.rcParams['axes.spines.right'] = False
     matplotlib.rcParams['axes.spines.top'] = False
 
-    num_epochs = len(train_history['train']['loss'])
-    val_exists = len(train_history['val']['loss']) > 0 
+    num_epochs = len(train_history['train']['metrics']['loss'])
+    val_exists = len(train_history['val']['metrics']['loss']) > 0 
 
     plt.figure(figsize=(16, 5))
     for i, metric in enumerate(metrics):
         plt.subplot(1, len(metrics), i + 1)
 
-        plt.plot(range(num_epochs), train_history['train'][metric], color='skyblue', label='train')
+        plt.plot(range(num_epochs), train_history['train']['metrics'][metric], color='skyblue', label='train')
         if val_exists:
-            plt.plot(range(num_epochs), train_history['val'][metric], color='darkorange', label='val')
+            plt.plot(range(num_epochs), train_history['val']['metrics'][metric], color='darkorange', label='val')
         if baseline_metrics and metric != 'loss':
             plt.axhline(y=baseline_metrics['train'][metric] + 1e-3, color='skyblue', alpha=0.7, linestyle='--', label='train base')
             if 'acc' in baseline_metrics['val']:
