@@ -5,7 +5,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 
 class MultilayerPerceptron(nn.Module):
-    def __init__(self, input_size=308, num_hidden_layers=2, hidden_layer_size=100):
+    def __init__(self, input_size=308, num_hidden_layers=2, hidden_layer_size=100, dropout_input=0.85, dropout_hidden=0.65, convolutional=False, num_conv_hidden_layers=1, filter_size=5, stride=2):
         '''
         Initialize an `num_hidden_layers + 2` neural network.
 
@@ -19,6 +19,14 @@ class MultilayerPerceptron(nn.Module):
 
         hidden_layer_size: int
             Number of neurons in each hidden layer
+
+        dropout_input: float
+
+        dropout_hidden: float
+
+        convolutional: True/False
+
+        num_conv
         '''
 
         super(MultilayerPerceptron, self).__init__()     
@@ -28,10 +36,10 @@ class MultilayerPerceptron(nn.Module):
         self.hidden = nn.ModuleList()  # initialize list of layers
         self.dropout = nn.ModuleList()  # initialize list of dropout-able layers
 
-        self.dropout.append(nn.Dropout(p=0.85))  # dropout for input layer
+        self.dropout[0] = nn.Dropout(p=dropout_input)  # dropout for input layer
         self.hidden.append(nn.Linear(input_size, hidden_layer_size))  # first hidden layer
-        for _ in range(1, num_hidden_layers):
-            self.dropout.append(nn.Dropout(p=0.65))  # dropout for hidden layers
+        for i in range(1, num_hidden_layers):
+            self.dropout[i] = nn.Dropout(p=dropout_hidden)  # dropout for hidden layers
             self.hidden.append(nn.Linear(hidden_layer_size, hidden_layer_size))  # fully-connected hidden layers
         self.hidden.append(nn.Linear(hidden_layer_size, 1))  # output layer
         
@@ -55,3 +63,4 @@ class MultilayerPerceptron(nn.Module):
     def get_my_name(self):
         name = "mlp_{0}x{1}".format(self.num_hid, self.hid_sz) 
         return name
+
