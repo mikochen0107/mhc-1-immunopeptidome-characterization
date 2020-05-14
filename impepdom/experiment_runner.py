@@ -19,8 +19,6 @@ import impepdom
 def hyperparam_grid_search(
     model, dataset, fold_idx=[0, 1, 2, 3],
     max_epochs=15, batch_sizes=[32, 64, 128], learning_rates=[5e-4, 1e-3, 5e-3],
-    dropout_input_list=[0.85], dropout_hidden_list=[0.65],
-    conv=False, num_conv_layers_list=[1], conv_filt_sz_list=[5], conv_stride=[1]
     optimizer=None, scheduler=None, sort_by='mean_auc_01'
 ):
     '''
