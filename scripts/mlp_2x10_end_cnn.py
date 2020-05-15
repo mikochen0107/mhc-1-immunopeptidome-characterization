@@ -26,7 +26,7 @@ for i, hla_allele in enumerate(hla_alleles_test):  # change allele list here
     
     dataset = impepdom.PeptideDataset(
         hla_allele=hla_allele,  
-        padding='flurry',
+        padding='end',
         toy=False)
         
     best_config = impepdom.hyperparam_search(
