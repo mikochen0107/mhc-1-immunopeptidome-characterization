@@ -86,9 +86,9 @@ def calculate_metrics(train_history, override=False):
 		num_epochs = len(train_history[phase]['out']['actual'])
 		epochs = range(num_epochs) if (override or num_epochs == 0) else [-1]
 		for epoch in epochs:
-			y_actual = train_history[phase]['out']['actual'][epoch]
-			y_pred = train_history[phase]['out']['pred'][epoch]
-			y_proba = train_history[phase]['out']['proba'][epoch]
+			y_actual = train_history[phase]['out']['actual'][epoch].flatten()
+			y_pred = train_history[phase]['out']['pred'][epoch].flatten()
+			y_proba = train_history[phase]['out']['proba'][epoch].flatten()
 
 			calc_metrics['acc'].append(acc(y_actual, y_pred))
 			calc_metrics['f1'].append(f1(y_actual, y_pred) )

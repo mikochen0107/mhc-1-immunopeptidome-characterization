@@ -90,7 +90,7 @@ def hyperparam_search(
 
             folder, _, config = run_experiment(
                 model_type=model_type,
-                dataset,
+                dataset=dataset,
                 train_fold_idx=train_fold_idx,
                 val_fold_idx=[val_fold_id],
                 learning_rate=hyperparams[1],
@@ -110,7 +110,7 @@ def hyperparam_search(
                 model_run_time=model_run_time
             )
 
-            train_history = impepdom.load_train_history(model, folder)            
+            train_history = impepdom.load_train_history(folder)            
             for metric in metrics:
                 cross_eval[metric].append(train_history['val']['metrics'][metric])  # get metric over epochs
             model_run_time = impepdom.store_manager.extract_model_run_time(folder)  # to keep in the same folder
@@ -212,6 +212,19 @@ def run_experiment(
     if need_validation:
         peploader['val'] = dataset.get_peptide_dataloader(fold_idx=val_fold_idx, batch_size=batch_size)
 
+    # (re-)initialize model
+    model = impepdom.models[model_type](
+        num_hidden_layers=2,
+        hidden_layer_size=100,
+        dropout_input=dropout_input,
+        dropout_hidden=dropout_hidden,
+
+        conv=conv,
+        num_conv_layers=num_conv_layers,
+        conv_filt_sz=conv_filt_sz,
+        conv_stride=conv_stride,
+    ) 
+
     # set up optimization criterion, optimization algorithm, and learning rate decay
     if criterion == None:
         criterion = nn.BCELoss()
@@ -223,19 +236,6 @@ def run_experiment(
         # lr_decay_step = 5
         # decay_factor = 0.9
         # exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=lr_decay_step, gamma=decay_factor)
-
-    # (re-)initialize model
-    model = impepdom.models.models['model_type'](
-        num_hidden_layers=2,
-        hidden_layer_size=100,
-        dropout_input=dropout_input,
-        dropout_hidden=dropout_hidden,
-
-        conv=conv,
-        num_conv_layers=num_conv_layers,
-        conv_filt_sz=conv_filt_sz,
-        conv_stride=conv_stride,
-    ) 
 
     # collect baseline metrics
     baseline_metrics = get_baseline_metrics(dataset, train_fold_idx, val_fold_idx)

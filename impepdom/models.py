@@ -29,7 +29,7 @@ class MultilayerPerceptron(nn.Module):
         dropout_hidden: float
             Dropout rate of the non-convolutional hidden layers
 
-        conv: True/False
+        conv: bool
             Whether convolutional layers are added
 
         num_conv_layers: int
@@ -53,7 +53,7 @@ class MultilayerPerceptron(nn.Module):
         self.conv = nn.ModuleList()
         self.dropout = nn.ModuleList()  # initialize list of dropout-able layers
 
-        # With convolution
+        # with convolution
         if conv:
             self.conv.append(nn.Conv1d(in_channels=1, out_channels=24, kernel_size=conv_filt_sz*NUM_AA, stride=conv_stride*NUM_AA, padding=(conv_filt_sz-1)*NUM_AA))
             self.conv.append(nn.MaxPool1d(kernel_size=2))
@@ -78,14 +78,14 @@ class MultilayerPerceptron(nn.Module):
         x: ndarray
             Input vector of size `self.input_size`
         '''
-        
+
+        x = x.reshape(x.size()[0], 1, -1)
+
         for j in range(self.num_conv_layers*2)[::2]:
-            print(j)
             x = F.relu(self.conv[j](x))
             x = self.conv[j+1](x)
         
-        x = x.flatten()
-        print(x.size())
+        x = x.reshape(x.size()[0], 1, -1)
             
         for i in range(self.num_hid):
             x = F.relu(self.dropout[i](self.hidden[i](x)))
@@ -95,7 +95,7 @@ class MultilayerPerceptron(nn.Module):
         return x
 
     def get_my_name(self):
-        if_cnn = if self.conv then '_cnn' else ''  # add a suffix to indicate it's CNN
+        if_cnn = ('_cnn' if self.conv else '')  # add a suffix to indicate it's CNN
         name = "mlp_{0}x{1}".format(self.num_hid, self.hid_sz) + if_cnn
         return name
 
