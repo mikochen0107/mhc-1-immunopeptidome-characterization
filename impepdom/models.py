@@ -52,6 +52,7 @@ class MultilayerPerceptron(nn.Module):
         self.hidden = nn.ModuleList()  # initialize list of layers
         self.conv = nn.ModuleList()
         self.dropout = nn.ModuleList()  # initialize list of dropout-able layers
+        self.conv_flag = conv
 
         # with convolution
         if conv:
@@ -61,12 +62,22 @@ class MultilayerPerceptron(nn.Module):
                 self.conv.append(nn.Conv1d(in_channels=24, out_channels=24, kernel_size=conv_filt_sz*NUM_AA, stride=conv_stride*NUM_AA, padding=(conv_filt_sz-1)*NUM_AA))
                 self.conv.append(nn.MaxPool1d(kernel_size=2))
 
-        self.dropout.append(nn.Dropout(p=dropout_input))  # dropout for input layer
-        self.hidden.append(nn.Linear(48, hidden_layer_size))  # first hidden layer !!! FIX THIS LATER (number of input neurons) !!!
-        for _ in range(1, num_hidden_layers):
-            self.dropout.append(nn.Dropout(p=dropout_hidden))  # dropout for hidden layers
-            self.hidden.append(nn.Linear(hidden_layer_size, hidden_layer_size))  # fully-connected hidden layers
-        self.hidden.append(nn.Linear(hidden_layer_size, 1))  # output layer
+            self.dropout.append(nn.Dropout(p=dropout_input))  # dropout for input layer
+            self.hidden.append(nn.Linear(48, hidden_layer_size))  # first hidden layer !!! FIX THIS LATER (number of input neurons) !!!
+
+            for _ in range(1, num_hidden_layers):
+                self.dropout.append(nn.Dropout(p=dropout_hidden))  # dropout for hidden layers
+                self.hidden.append(nn.Linear(hidden_layer_size, hidden_layer_size))  # fully-connected hidden layers
+            self.hidden.append(nn.Linear(hidden_layer_size, 1))  # output layer
+
+        else:
+            self.dropout.append(nn.Dropout(p=dropout_input))  # dropout for input layer
+            self.hidden.append(nn.Linear(input_size, hidden_layer_size))  # first hidden layer !!! FIX THIS LATER (number of input neurons) !!!
+
+            for _ in range(1, num_hidden_layers):
+                self.dropout.append(nn.Dropout(p=dropout_hidden))  # dropout for hidden layers
+                self.hidden.append(nn.Linear(hidden_layer_size, hidden_layer_size))  # fully-connected hidden layers
+            self.hidden.append(nn.Linear(hidden_layer_size, 1))  # output layer
     
 
     def forward(self, x):
@@ -78,12 +89,12 @@ class MultilayerPerceptron(nn.Module):
         x: ndarray
             Input vector of size `self.input_size`
         '''
+        if self.conv_flag:
+            x = x.reshape(x.size()[0], 1, -1)
 
-        x = x.reshape(x.size()[0], 1, -1)
-
-        for j in range(self.num_conv_layers*2)[::2]:
-            x = F.relu(self.conv[j](x))
-            x = self.conv[j+1](x)
+            for j in range(self.num_conv_layers*2)[::2]:
+                x = F.relu(self.conv[j](x))
+                x = self.conv[j+1](x)
         
         x = x.reshape(x.size()[0], 1, -1)
             
