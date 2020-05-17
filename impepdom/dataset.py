@@ -16,7 +16,7 @@ class PeptideDataset:
     ALL_AA = ['A', 'R', 'N', 'D', 'C', 'E', 'Q', 'G', 'H', 'I', 'L', 'K', 'M', 'F', 'P', 'S', 'T', 'W', 'Y', 'V', 'U', 'X']
     NUM_AA = len(ALL_AA)  # number of amino acids (21 + 1 unknown)
     
-    def __init__(self, hla_allele, root=None, encoding='default', max_pep_len=14, padding='end', test_set='c004', input_format='linear', toy=False):
+    def __init__(self, hla_allele, root=None, encoding='default', max_pep_len=14, padding='end', test_set='c004', input_format='linear', conv=False, toy=False):
         '''
         Initialize dataset class for each human leukocyte antigen (HLA or MHC) allele.
         
@@ -42,6 +42,9 @@ class PeptideDataset:
         
         input_format: str
             Specify datum shape. Options: 'linear', '2d'
+
+        conv: bool
+            Whether convolutional layers are added
             
         toy: bool
             Initialize only a small subset of peptides dataset
@@ -57,6 +60,7 @@ class PeptideDataset:
         self.test_set = test_set
         self.input_format = input_format
         self.toy = toy
+        self.conv = conv
         
         self.data, self.targets, self.raw_data = self.parse_csv()
         print(impepdom.time_tracker.now() + 'peptide dataset initialized')
@@ -65,7 +69,7 @@ class PeptideDataset:
 
     def get_peptide_dataloader(self, batch_size=64, fold_idx=[0]):
         data, targets = self.get_fold(fold_idx)
-        dataset = Dataset(data, targets)
+        dataset = Dataset(data, targets, conv=self.conv)
 
         class_count = [len(targets == 0), len(targets == 1)]  # counts of class 0, count of class 1
         weights = 1.0 / torch.Tensor(class_count)
@@ -101,6 +105,7 @@ class PeptideDataset:
         targets = {}
         
         for file in files:
+            # !!! ADD SAMPLING OF 0 AND 1 SO WE HAVE SOME REPRESENTATION IN TOY DATASET
             content = np.loadtxt(os.path.join(self.root, self.hla_allele, file), dtype='str')
             raw_data[file] = (content[:, 0] if not self.toy else content[:1024, 0]).astype('str')
             targets[file] = (content[:, 1] if not self.toy else content[:1024, 1]).astype(float)
@@ -302,12 +307,12 @@ class PeptideDataset:
         plt.show()
         
 class Dataset:
-    def __init__(self, data, targets):
+    def __init__(self, data, targets, conv=False):
         self.data = data
         self.targets = targets
         
     def __getitem__(self, index):
-        item = {'peptide': self.data[index], 'target': self.targets[index]}
+        item = {'peptide': self.data[index].reshape(1, -1), 'target': self.targets[index].reshape(1, -1)}
         return item
     
     def __len__(self):

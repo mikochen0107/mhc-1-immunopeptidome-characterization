@@ -73,7 +73,7 @@ def train_nn(model, peploader, criterion, optimizer, scheduler=None, num_epochs=
                     y_pred.append(preds.numpy())
                     y_proba.append(proba.numpy())
 
-                    loss = criterion(output, target)
+                    loss = criterion(output, target.float().reshape(target.size()[0], 1, -1))  # !!! ONLY WORKS FOR CNN !!!
                     
                     if phase == 'train':
                         loss.backward()

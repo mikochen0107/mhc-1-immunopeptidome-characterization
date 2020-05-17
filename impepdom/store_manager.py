@@ -11,7 +11,7 @@ import impepdom.metrics
 
 STORE_PATH = os.path.join(os.getcwd(), '../store')
 
-def get_save_path(model, hla_allele, train_fold_idx, which_model):
+def get_save_path(model, hla_allele, train_fold_idx, model_run_time):
     '''
     Saves model trained state and history of training and validation metrics.
     Model outputs are uniquely stored in the a string composed of:
@@ -30,7 +30,7 @@ def get_save_path(model, hla_allele, train_fold_idx, which_model):
     train_fold_idx: list
         Indices of folds used for training
 
-    which_model: string
+    model_run_time: string
         Datetime of model run to write into. Format: 'mlp_2x10_a01:01/200327_212136'
 
     Returns
@@ -45,10 +45,10 @@ def get_save_path(model, hla_allele, train_fold_idx, which_model):
 
     # storage format is model_name-hla_allele/datetime_of_model_save/train-fold_indices
     dt = datetime.now().strftime('%y%m%d_%H%M%S')  # format is yymmdd_hhmmss
-    if which_model == None:
+    if model_run_time == None:
         folder = '{0}_{1}/{2}/train_{3}'.format(name, allele, dt, train_folds)
     else:
-        folder = os.path.join(which_model, 'train_{0}'.format(train_folds))
+        folder = os.path.join(model_run_time, 'train_{0}'.format(train_folds))
 
     path_to_folder = os.path.join(STORE_PATH, folder)
     os.makedirs(path_to_folder, exist_ok=True)
@@ -80,13 +80,33 @@ def load_trained_model(model, folder):
     model.load_state_dict(torch.load(model_path))
     model.eval()  # set to inference mode
 
+    train_history = load_train_history(folder)
+
+    return model, train_history
+
+def load_train_history(folder):
+    '''
+    Load train_history file from path to model cache
+
+    Parameters
+    ----------
+    folder: string
+        Path inside STORE_PATH to folder storing trained model information
+
+    Returns
+    ----------
+    train_history: dict
+        Dictionary of training history
+    '''
+
     # fetch training history
     train_history_path = os.path.join(STORE_PATH, folder, 'train_history')
     infile = open(train_history_path,'rb')
     train_history = pickle.load(infile)
     infile.close()
 
-    return model, train_history
+    return train_history
+
 
 def update_hyperparams_store(results_store):
     '''
@@ -97,16 +117,6 @@ def update_hyperparams_store(results_store):
     results_store: dict
         Dictionary containing model name, hyperparam settings, and evaluation metrics
     '''
-
-    # {
-    #     'model': folder,
-    #     'mean_' + _eval: np.mean(cross_eval),
-    #     'min_' + _eval: np.min(cross_eval),
-    #     'max_' + _eval: np.max(cross_eval),
-    #     'batch_size': batch_size,
-    #     'num_epochs': num_epochs,
-    #     'learning_rate': learning_rate,
-     #           }
     
     new_hyperparam_vals = get_hyperparams_store_template()
     for res in results_store:
@@ -169,10 +179,10 @@ def extract_date(folder):
     path = folder
     path = folder[folder.find('/') + 1:]
     path = folder[:path.find('/')]
-    
+
     return path
 
-def extract_which_model(folder):
+def extract_model_run_time(folder):
     '''
     Get folder upper of a chosen model training to write
     multiple results of cross-validation.
@@ -204,6 +214,13 @@ def get_hyperparams_store_template():
         'learning_rate': [],
         'optimizer': [],
         'scheduler': [],
+
+        'dropout_input': [],
+        'dropout_hidden': [],
+        'conv': [],
+        'num_conv_layers': [],
+        'conv_filt_sz': [],
+        'conv_stride': [],
     }
 
     # initilize space for metrics
