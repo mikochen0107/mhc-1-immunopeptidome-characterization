@@ -8,6 +8,7 @@ ALL_AA = ['A', 'R', 'N', 'D', 'C', 'E', 'Q', 'G', 'H', 'I', 'L', 'K', 'M', 'F', 
 NUM_AA = len(ALL_AA)  # number of amino acids (21 + 1 unknown)
 
 class MultilayerPerceptron(nn.Module):
+
     def __init__(self, input_size=308, num_hidden_layers=2, hidden_layer_size=100, dropout_input=0.85, dropout_hidden=0.65, conv=False, num_conv_layers=1, conv_filt_sz=5, conv_stride=2):
         '''
         Initialize an `num_hidden_layers + 2` neural network.
@@ -40,7 +41,7 @@ class MultilayerPerceptron(nn.Module):
 
         conv_stride: int
             Gap between filters
-        '''
+
 
         super(MultilayerPerceptron, self).__init__()     
         self.inp_sz = input_size
@@ -110,6 +111,7 @@ class MultilayerPerceptron(nn.Module):
         name = "mlp_{0}x{1}".format(self.num_hid, self.hid_sz) + if_cnn
         return name
 
+
 def initialized_model(model_type):
     '''
     model_type: string
@@ -121,3 +123,4 @@ def initialized_model(model_type):
 models = {
     'MultilayerPerceptron': MultilayerPerceptron,
 }
+
