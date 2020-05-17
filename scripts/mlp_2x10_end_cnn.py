@@ -18,7 +18,7 @@ hla_alleles = [
     'HLA-A68:01'   # <<< Michael
 ]
 
-hla_alleles_test = ['HLA-A01:01']
+hla_alleles_test = ['HLA-B08:01']
 impepdom.time_tracker.reset_timer()  # start counting time
 
 for i, hla_allele in enumerate(hla_alleles_test):  # change allele list here
@@ -36,8 +36,8 @@ for i, hla_allele in enumerate(hla_alleles_test):  # change allele list here
         batch_sizes=[32],
         learning_rates=[1e-3],
 
-        dropout_input_list=[0.25],
-        dropout_hidden_list=[0.55],
+        dropout_input_list=[0.4],
+        dropout_hidden_list=[0.7],
         conv_flags=[True],
         num_conv_layers_list=[2],
         conv_filt_sz_list=[5],
