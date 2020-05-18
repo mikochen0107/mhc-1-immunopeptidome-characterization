@@ -41,7 +41,7 @@ class MultilayerPerceptron(nn.Module):
 
         conv_stride: int
             Gap between filters
-
+        '''
 
         super(MultilayerPerceptron, self).__init__()     
         self.inp_sz = input_size

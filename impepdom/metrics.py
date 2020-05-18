@@ -59,6 +59,9 @@ def acc(y_true, y_pred):
 def f1(y_true, y_pred):
 	return f1_score(y_true, y_pred) 
 
+def f_rank(y_true, y_pred):
+	pass
+
 def calculate_metrics(train_history, override=False):
 	'''
 	Calculates specified metrics per epoch based on model outputs.
