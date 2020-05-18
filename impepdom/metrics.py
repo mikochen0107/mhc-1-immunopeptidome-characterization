@@ -59,8 +59,12 @@ def acc(y_true, y_pred):
 def f1(y_true, y_pred):
 	return f1_score(y_true, y_pred) 
 
-def f_rank(y_true, y_pred):
-	pass
+def f_rank(y_true, y_proba):
+    sorted_y_true = np.flip([x for _, x in sorted(zip(y_proba, y_true))])
+    rank = np.where(sorted_y_true == 1)[0][0]
+    f_rank = rank / sorted_y_true.size
+    
+    return f_rank
 
 def calculate_metrics(train_history, override=False):
 	'''
