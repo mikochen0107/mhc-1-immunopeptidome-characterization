@@ -123,4 +123,3 @@ def initialized_model(model_type):
 models = {
     'MultilayerPerceptron': MultilayerPerceptron,
 }
-

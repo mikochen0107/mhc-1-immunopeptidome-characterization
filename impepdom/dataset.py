@@ -317,3 +317,9 @@ class Dataset:
     
     def __len__(self):
         return self.data.shape[0]
+
+class EpitopesDataset():
+
+
+class MSDataset():
+    
