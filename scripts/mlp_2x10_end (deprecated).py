@@ -10,7 +10,7 @@ model = impepdom.models.MultilayerPerceptron(num_hidden_layers=2, hidden_layer_s
 
 for i, hla_allele in enumerate(hla_alleles):
     print('working with allele {0} out of {1}'.format(i + 1, len(hla_alleles)))
-    dataset = impepdom.PeptideDataset(
+    dataset = impepdom.TrainPeptideDataset(
         hla_allele=hla_allele,
         padding='end',
         toy=False)

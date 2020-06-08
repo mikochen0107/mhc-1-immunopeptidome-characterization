@@ -2,21 +2,20 @@ import os
 from collections import Counter
 import random
 import time
+import copy
 
-import torch
+import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
 
 import impepdom.time_tracker
 
-
 class PeptideDataset:
-    ROOT = '../datasets/MHC_I_el_allele_specific'.format(__file__)  # root directory containing peptide binding data
     ALL_AA = ['A', 'R', 'N', 'D', 'C', 'E', 'Q', 'G', 'H', 'I', 'L', 'K', 'M', 'F', 'P', 'S', 'T', 'W', 'Y', 'V', 'U', 'X']
     NUM_AA = len(ALL_AA)  # number of amino acids (21 + 1 unknown)
-    
-    def __init__(self, hla_allele, root=None, encoding='default', max_pep_len=14, padding='end', test_set='c004', input_format='linear', conv=False, toy=False):
+
+    def __init__(self, hla_allele, root=None, encoding='default', max_pep_len=14, padding='end'):
         '''
         Initialize dataset class for each human leukocyte antigen (HLA or MHC) allele.
         
@@ -35,90 +34,17 @@ class PeptideDataset:
             
         padding: str, optional
             Padding for amino acid sequence. Options: 'begin', 'end', 'after2', 'flurry'
-            
-        test_set: str, optional
-            Specify test set which should not be touched during model development.
-            Options: 'c000', 'c001', 'c002', 'c003', 'c004'
-        
-        input_format: str
-            Specify datum shape. Options: 'linear', '2d'
-
-        conv: bool
-            Whether convolutional layers are added
-            
-        toy: bool
-            Initialize only a small subset of peptides dataset
         '''
         
-        since = time.time()
-
         self.hla_allele = hla_allele
-        self.root = self.ROOT if root == None else root
+        self.root = root
         self.encoding = encoding
         self.max_pep_len = max_pep_len
         self.padding = padding
-        self.test_set = test_set
-        self.input_format = input_format
-        self.toy = toy
-        self.conv = conv
-        
-        self.data, self.targets, self.raw_data = self.parse_csv()
-        print(impepdom.time_tracker.now() + 'peptide dataset initialized')
 
-    ### (begin) Neural network training related methods ###
+    ### SHARED (begin)
+    ###
 
-    def get_peptide_dataloader(self, batch_size=64, fold_idx=[0]):
-        data, targets = self.get_fold(fold_idx)
-        dataset = Dataset(data, targets, conv=self.conv)
-
-        class_count = [len(targets == 0), len(targets == 1)]  # counts of class 0, count of class 1
-        weights = 1.0 / torch.Tensor(class_count)
-        sample_weights = np.array([weights[int(t)] for t in targets])
-        sampler = torch.utils.data.sampler.WeightedRandomSampler(sample_weights, len(sample_weights))
-
-        peploader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, sampler=sampler)
-
-        return peploader
-
-    def get_allele(self):
-        return self.hla_allele
-
-    ### (end) Neural network training related methods ###
-       
-    def parse_csv(self):
-        '''
-        Open up CSV and gets pandas dataframe for initializing class' properties.
-        
-        Returns
-        ----------
-        data: dict of ndarray
-            Dataset (N_i x M) for each peptide group
-        
-        targets: dict of ndarray
-            Labels (N_i x 1) for each peptide group
-        '''
-        
-        files = os.listdir(os.path.join(self.root, self.hla_allele))
-        # files.remove(self.test_set)  # remove test set
-        
-        raw_data = {}
-        targets = {}
-        
-        for file in files:
-            # !!! ADD SAMPLING OF 0 AND 1 SO WE HAVE SOME REPRESENTATION IN TOY DATASET
-            content = np.loadtxt(os.path.join(self.root, self.hla_allele, file), dtype='str')
-            raw_data[file] = (content[:, 0] if not self.toy else content[:1024, 0]).astype('str')
-            targets[file] = (content[:, 1] if not self.toy else content[:1024, 1]).astype(float)
-        
-        data = {}
-        for file in files:
-            data[file] = [] # initialize empty array for dict value
-            for aa_seq in raw_data[file]:
-                data[file].append(self.format_seq(aa_seq))
-            data[file] = np.stack(data[file], axis=0)
-        
-        return data, targets, raw_data
-    
     def format_seq(self, seq):
         '''
         Converts an amino acid string sequence into a binary padded format.
@@ -138,8 +64,6 @@ class PeptideDataset:
         padded_converted_seq = self.pad(converted_seq, bits) 
         
         feat_vect = np.fromstring(' '.join(padded_converted_seq), sep=' ', dtype=float)  # convert to binary ndarray
-        if self.input_format == '2d':
-            feat_vect.reshape((int(len(padded_converted_seq) / bits), bits))
         
         return feat_vect
     
@@ -227,6 +151,126 @@ class PeptideDataset:
             padded_seq = seq[:pos] + pad_bits + seq[pos:]
             
         return padded_seq
+
+    def get_allele(self):
+        return self.hla_allele
+
+    ###
+    ### SHARED (end)
+
+    ### TEST DATA (begin)
+    ###
+    
+    def encoded_epitopes(self, _epitopes_data):
+        epitopes_data = copy.deepcopy(_epitopes_data)
+        for _, epi in epitopes_data.items():
+            for i in range(epi.shape[0]):
+                epi['peptide'][i] = self.format_seq(epi['peptide'][i])
+                
+        return epitopes_data
+
+    def get_data_and_targets(self, encoded_epitopes):
+        data_store = {}
+        targets_store = {}
+        
+        for key, epi in encoded_epitopes.items():
+            data = np.vstack([np.array(list(pep), dtype=float) for pep in epi['peptide']])
+            data_store[key] = data
+            targets_store[key] = np.array(epi['label'], dtype=float)
+            
+        return data_store, targets_store
+    
+    ###
+    ### TEST DATA (end)
+
+class TrainPeptideDataset(PeptideDataset):
+    ROOT = '../datasets/MHC_I_el_allele_specific'.format(__file__)  # root directory containing peptide binding data
+    ALL_AA = ['A', 'R', 'N', 'D', 'C', 'E', 'Q', 'G', 'H', 'I', 'L', 'K', 'M', 'F', 'P', 'S', 'T', 'W', 'Y', 'V', 'U', 'X']
+    NUM_AA = len(ALL_AA)  # number of amino acids (21 + 1 unknown)
+    
+    def __init__(self, hla_allele, root=None, encoding='default', max_pep_len=14, padding='end', test_set=None, toy=False):
+        '''
+        Initialize dataset class for each human leukocyte antigen (HLA or MHC) allele.
+        
+        Parameters
+        ----------
+        hla_allele: str
+            Folder name of HLA allele of interest
+        
+        root: str, optional
+            Location of dataset
+            
+        encoding: str, optional
+            Amino acid encoding style. Options: 'default', TBD
+            
+        max_pep_len: int, optional
+            
+        padding: str, optional
+            Padding for amino acid sequence. Options: 'begin', 'end', 'after2', 'flurry'
+            
+        test_set: str, optional
+            Specify test set which should not be touched during model development.
+            Options: 'c000', 'c001', 'c002', 'c003', 'c004'
+        
+        toy: bool
+            Initialize only a small subset of peptides dataset
+        '''
+        
+        since = time.time()
+        super().__init__(hla_allele, root=(self.ROOT if root == None else root), encoding='default', max_pep_len=14, padding='end')
+        
+        self.test_set = test_set
+        self.toy = toy
+        self.data, self.targets, self.raw_data = self.parse_csv()
+        print(impepdom.time_tracker.now() + 'training dataset initialized')
+
+    def get_peptide_dataloader(self, batch_size=64, fold_idx=[0]):
+        data, targets = self.get_fold(fold_idx)
+        dataset = DataFetch(data, targets)
+
+        class_count = [len(targets == 0), len(targets == 1)]  # counts of class 0, count of class 1
+        weights = 1.0 / torch.Tensor(class_count)
+        sample_weights = np.array([weights[int(t)] for t in targets])
+        sampler = torch.utils.data.sampler.WeightedRandomSampler(sample_weights, len(sample_weights))
+
+        peploader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, sampler=sampler)
+
+        return peploader
+       
+    def parse_csv(self):
+        '''
+        Open up CSV and gets pandas dataframe for initializing class' properties.
+        
+        Returns
+        ----------
+        data: dict of ndarray
+            Dataset (N_i x M) for each peptide group
+        
+        targets: dict of ndarray
+            Labels (N_i x 1) for each peptide group
+        '''
+        
+        files = os.listdir(os.path.join(self.root, self.hla_allele))
+        if self.test_set != None:
+            files.remove(self.test_set)  # remove test set
+        
+        raw_data = {}
+        targets = {}
+        
+        for file in files:
+            # !!! ADD SAMPLING OF 0 AND 1 SO WE HAVE SOME REPRESENTATION IN TOY DATASET
+            content = np.loadtxt(os.path.join(self.root, self.hla_allele, file), dtype='str')
+            raw_data[file] = (content[:, 0] if not self.toy else content[:1024, 0]).astype('str')
+            targets[file] = (content[:, 1] if not self.toy else content[:1024, 1]).astype(float)
+        
+        data = {}
+        for file in files:
+            data[file] = [] # initialize empty array for dict value
+            for aa_seq in raw_data[file]:
+                data[file].append(self.format_seq(aa_seq))
+            data[file] = np.stack(data[file], axis=0)
+        
+        return data, targets, raw_data
     
     def get_fold(self, fold_idx=[0], randomize=True, raw_data=False):
         '''
@@ -306,8 +350,8 @@ class PeptideDataset:
         plt.xticks(np.arange(0, 5))
         plt.show()
         
-class Dataset:
-    def __init__(self, data, targets, conv=False):
+class DataFetch:
+    def __init__(self, data, targets):
         self.data = data
         self.targets = targets
         
@@ -318,8 +362,43 @@ class Dataset:
     def __len__(self):
         return self.data.shape[0]
 
-class EpitopesDataset():
+class EpitopesDataset(PeptideDataset):
+    ROOT = '../datasets/test_sets/epitopes/processed'
 
+    def __init__(self, hla_allele, root=None, encoding='default', max_pep_len=14, padding='end'):
+        since = time.time()
+        super().__init__(hla_allele, root=(self.ROOT if root == None else root), encoding='default', max_pep_len=14, padding='end')
 
-class MSDataset():
-    
+        raw_epitopes_data = self.load_epitopes_data()
+        epitopes_data = self.encoded_epitopes(raw_epitopes_data)
+        # !!! ADD RAW PEPTIDE SEQS !!!
+        self.data, self.targets = self.get_data_and_targets(epitopes_data)
+
+        print(impepdom.time_tracker.now() + 'epitopes dataset initialized')
+
+    def load_epitopes_data(self):
+        allele_epitopes = []
+        for epitope in os.listdir(self.root):
+            if epitope.find(self.hla_allele) >= 0:
+                allele_epitopes.append(epitope)
+        
+        epitopes_data = {}
+        for epi in allele_epitopes:
+            key = epi[epi.find('_') + 1:epi.find('.txt')]
+            epitopes_data[key] = (pd.read_csv(os.path.join(self.root, epi), header=None, names=['peptide', 'label'], delimiter=' '))
+
+        return epitopes_data
+
+class MSDataset(PeptideDataset):
+    ROOT = '../datasets/test_sets/MS_ligands/processed'
+
+    def __init__(self, hla_allele, root=None, encoding='default', max_pep_len=14, padding='end'):
+        since = time.time()
+        super().__init__(hla_allele, root=(self.ROOT if root == None else root), encoding='default', max_pep_len=14, padding='end')
+
+        raw_ms_data = {}
+        raw_ms_data['0'] = pd.read_csv(os.path.join(self.ROOT, self.hla_allele + '_test.txt'), header=None, names=['peptide', 'label'], delimiter=' ')
+        ms_data = self.encoded_epitopes(raw_ms_data)
+        self.data, self.targets = self.get_data_and_targets(ms_data)
+
+        print(impepdom.time_tracker.now() + 'mass-spec dataset initialized')

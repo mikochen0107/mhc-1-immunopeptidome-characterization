@@ -29,7 +29,7 @@ def hyperparam_search(
     model_type: string
         String of class name of neural network to be used
 
-    dataset: impepdom.PeptideDataset
+    dataset: impepdom.TrainPeptideDataset
         Initialized peptide dataset for MHC I
 
     fold_idx: list
@@ -169,7 +169,7 @@ def run_experiment(
     model_type: string
         String of class name of neural network to be used
 
-    dataset: impepdom.PeptideDataset
+    dataset: impepdom.TrainPeptideDataset
         Initialized peptide dataset for MHC I
 
     train_fold_idx: list

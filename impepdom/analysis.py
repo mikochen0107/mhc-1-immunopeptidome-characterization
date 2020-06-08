@@ -89,7 +89,7 @@ def make_trained_model(hyperparams):
     impepdom.time_tracker.reset_timer() 
 
     print('working with allele', hyperparams['hla_allele'])
-    dataset = impepdom.PeptideDataset(
+    dataset = impepdom.TrainPeptideDataset(
         hla_allele=hyperparams['hla_allele'],
         padding=hyperparams['padding'],
         toy=False)

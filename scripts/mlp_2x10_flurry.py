@@ -24,7 +24,7 @@ impepdom.time_tracker.reset_timer()  # start counting time
 for i, hla_allele in enumerate(hla_alleles_test):  # change allele list here
     print(impepdom.time_tracker.now() + 'working with allele {0} out of {1}'.format(i + 1, len(hla_alleles_test)))  # change allele list here
     
-    dataset = impepdom.PeptideDataset(
+    dataset = impepdom.TrainPeptideDataset(
         hla_allele=hla_allele,  
         padding='flurry',
         toy=False)
@@ -51,7 +51,7 @@ for i, hla_allele in enumerate(hla_alleles_test):  # change allele list here
 # for i, hla_allele in enumerate(hla_alleles_khoi_1):  # change allele list here
 #     print(impepdom.time_tracker.now() + 'working with allele {0} out of {1}'.format(i + 1, len(hla_alleles_khoi_1)))  # change allele list here
     
-#     dataset = impepdom.PeptideDataset(
+#     dataset = impepdom.TrainPeptideDataset(
 #         hla_allele=hla_allele,  
 #         padding='end',
 #         toy=False

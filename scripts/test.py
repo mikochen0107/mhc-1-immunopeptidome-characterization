@@ -13,7 +13,7 @@ import pickle
 
 hla_allele = 'HLA-A01:01'
 fold_idx = [0, 1, 2]
-hla_a01_01 = impepdom.PeptideDataset(hla_allele, padding='after2', toy=True)
+hla_a01_01 = impepdom.TrainPeptideDataset(hla_allele, padding='after2', toy=True)
 peploader = hla_a01_01.get_peptide_dataloader(fold_idx)
 mlp = impepdom.MultilayerPerceptron()
 

@@ -30,7 +30,7 @@ sys.path.append("..")  # add top folder to path
 import impepdom
 
 model = impepdom.models.MultilayerPerceptron(num_hidden_layers=2, hidden_layer_size=100)
-dataset = impepdom.PeptideDataset(
+dataset = impepdom.TrainPeptideDataset(
     hla_allele='HLA-A01:01',
     padding='flurry',
     toy=True)
