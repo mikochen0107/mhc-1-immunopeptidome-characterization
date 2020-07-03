@@ -180,6 +180,17 @@ class PeptideDataset:
             
         return data_store, targets_store
     
+    # def get_data_and_targets(self, encoded_epitopes):
+    #     data_store = {}
+    #     targets_store = {}
+        
+    #     for key, epi in encoded_epitopes.items():
+    #         data = np.vstack([np.array(list(pep), dtype=float) for pep in epi['peptide']])
+    #         data_store[key] = data
+    #         targets_store[key] = np.array(epi['label'], dtype=float)
+            
+    #     return data_store, targets_store
+
     ###
     ### TEST DATA (end)
 

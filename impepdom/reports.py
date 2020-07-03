@@ -1,3 +1,6 @@
+import os
+
+import pandas as pd
 import torch
 
 import impepdom.metrics
@@ -60,7 +63,7 @@ def generate_epi_report(scores_store, filename):
     
     return report
 
-def generate_ms_metrics(scores_store, filename):
+def generate_ms_report(scores_store, filename):
     mhc_col = []
     auc_col = []
     auc_01_col = []
